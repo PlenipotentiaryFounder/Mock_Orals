@@ -1,0 +1,51 @@
+import { createServerClient } from "@/lib/supabase/server"
+import { NextResponse } from "next/server"
+
+export async function GET() {
+  try {
+    const supabase = createServerClient()
+
+    // Instead of trying to access auth.users directly, let's query the sessions table
+    // to get a list of users who have created sessions
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("user_id, student_name, student_email")
+      .order("date_started", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching sessions:", error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Create a map to deduplicate users
+    const userMap = new Map()
+
+    // Add each unique user to the map
+    data.forEach((session) => {
+      if (!userMap.has(session.user_id)) {
+        userMap.set(session.user_id, {
+          id: session.user_id,
+          email: session.student_email || "user@example.com",
+          fullName: session.student_name || "User",
+        })
+      }
+    })
+
+    // Convert the map to an array
+    const users = Array.from(userMap.values())
+
+    // Add a default user if none are found
+    if (users.length === 0) {
+      users.push({
+        id: "default-user",
+        email: "instructor@example.com",
+        fullName: "Default Instructor",
+      })
+    }
+
+    return NextResponse.json({ users })
+  } catch (error: any) {
+    console.error("Server error fetching users:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
