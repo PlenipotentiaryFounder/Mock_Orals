@@ -4,6 +4,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardNav } from "@/components/dashboard-nav"
+import { AcsSidebar } from "@/components/acs-sidebar"
 
 export default function DashboardLayout({
   children,
@@ -54,7 +55,8 @@ export default function DashboardLayout({
           </div>
         </div>
       </header>
-      <div className="container flex-1 items-start md:grid md:grid-cols-[220px_1fr] md:gap-6 lg:grid-cols-[240px_1fr] lg:gap-10">
+      <div className="container flex flex-1 items-start md:grid md:grid-cols-[256px_1fr] md:gap-6 lg:gap-10">
+        <AcsSidebar />
         {children}
       </div>
     </div>

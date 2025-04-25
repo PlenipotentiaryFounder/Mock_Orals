@@ -58,6 +58,15 @@ type SessionData = {
   date_completed: string | null
 }
 
+// Add StudentData type definition
+type StudentData = {
+  id: string // Assuming UUID primary key for student
+  user_id: string // Foreign key referencing auth.users.id
+  full_name: string
+  email: string | null
+  created_at: string
+}
+
 // Cache for frequently accessed data
 const cache = {
   templates: new Map<string, TemplateData>(),
@@ -571,4 +580,21 @@ export const getScenarios = async (): Promise<any[]> => {
   }
 
   return data
+}
+
+// Add function to get students by user ID
+export const getStudentsByUserId = async (userId: string): Promise<StudentData[]> => {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("students") // Query the public.students table
+    .select("*")
+    .eq("user_id", userId) // Filter by the user_id column
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching students:", error)
+    return []
+  }
+
+  return data || []
 }

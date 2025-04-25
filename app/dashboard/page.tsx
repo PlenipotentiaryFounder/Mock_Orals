@@ -6,31 +6,6 @@ import { PlusCircle, Clock, CheckCircle2 } from "lucide-react"
 export default function DashboardPage() {
   return (
     <>
-      <aside className="fixed top-16 z-30 -ml-2 hidden h-[calc(100vh-4rem)] w-full shrink-0 md:sticky md:block">
-        <div className="h-full py-6 pr-6 lg:py-8">
-          <div className="flex h-full flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">Dashboard</h2>
-            </div>
-            <nav className="grid gap-2 px-2">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-3 rounded-lg bg-accent px-3 py-2 text-accent-foreground"
-              >
-                <Clock className="h-4 w-4" />
-                <span>Recent Sessions</span>
-              </Link>
-              <Link
-                href="/templates"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>ACS Templates</span>
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </aside>
       <main className="flex w-full flex-col overflow-hidden">
         <div className="flex items-center justify-between px-2">
           <div className="space-y-1 p-4">

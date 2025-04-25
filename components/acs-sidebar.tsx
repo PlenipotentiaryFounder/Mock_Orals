@@ -1,100 +1,72 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { getAcsSidebarData } from "@/lib/supabase/data-fetchers"
+import { Button } from "@/components/ui/button"
+import { CalendarDays, FileText, PlusCircle, Users } from "lucide-react"
 
-interface AcsSidebarProps {
-  onTaskSelect: (task: any, area: any) => void
-  sessionId: string
-}
+export function AcsSidebar() {
+  const pathname = usePathname()
 
-export function AcsSidebar({ onTaskSelect, sessionId }: AcsSidebarProps) {
-  const [areas, setAreas] = useState<any[]>([])
-  const [tasksByArea, setTasksByArea] = useState<Record<string, any[]>>({})
-  const [expandedAreas, setExpandedAreas] = useState<Record<string, boolean>>({})
-  const [loading, setLoading] = useState(true)
-  const [completedTasks, setCompletedTasks] = useState<string[]>([])
-
-  useEffect(() => {
-    const fetchAcsData = async () => {
-      try {
-        const data = await getAcsSidebarData(sessionId)
-
-        if (data) {
-          setAreas(data.areas)
-          setTasksByArea(data.tasksByArea)
-          setCompletedTasks(data.completedTasks)
-
-          // Auto-expand the first area
-          if (data.areas.length > 0) {
-            setExpandedAreas({ [data.areas[0].id]: true })
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching ACS data:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAcsData()
-  }, [sessionId])
-
-  const toggleArea = (areaId: string) => {
-    setExpandedAreas((prev) => ({
-      ...prev,
-      [areaId]: !prev[areaId],
-    }))
-  }
-
-  const handleTaskClick = (task: any, area: any) => {
-    onTaskSelect(task, area)
-  }
-
-  if (loading) {
-    return <div className="w-64 border-r p-4">Loading ACS structure...</div>
-  }
+  const routes = [
+    {
+      href: "/dashboard",
+      icon: <CalendarDays className="h-5 w-5" />,
+      label: "Dashboard",
+      active: pathname === "/dashboard",
+    },
+    {
+      href: "/sessions",
+      icon: <CalendarDays className="h-5 w-5" />,
+      label: "Sessions",
+      active: pathname.startsWith("/sessions"),
+    },
+    {
+      href: "/reports",
+      icon: <FileText className="h-5 w-5" />,
+      label: "Reports",
+      active: pathname.startsWith("/reports"),
+    },
+    {
+      href: "/students",
+      icon: <Users className="h-5 w-5" />,
+      label: "Students",
+      active: pathname.startsWith("/students"),
+    },
+  ]
 
   return (
-    <div className="w-64 border-r overflow-auto">
-      <div className="p-4">
-        <h2 className="font-semibold mb-4">ACS Areas of Operation</h2>
-        <div className="space-y-2">
-          {areas.map((area) => (
-            <div key={area.id} className="border rounded-md">
-              <button
-                className="flex items-center justify-between w-full p-2 text-left font-medium"
-                onClick={() => toggleArea(area.id)}
-              >
-                <span>{area.title}</span>
-                {expandedAreas[area.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </button>
-
-              {expandedAreas[area.id] && tasksByArea[area.id] && (
-                <div className="pl-4 pr-2 pb-2 space-y-1">
-                  {tasksByArea[area.id].map((task: any) => (
-                    <button
-                      key={task.id}
-                      className={cn(
-                        "flex items-center justify-between w-full p-2 text-sm rounded-md",
-                        "hover:bg-accent hover:text-accent-foreground",
-                      )}
-                      onClick={() => handleTaskClick(task, area)}
-                    >
-                      <span className="flex items-center">
-                        {task.order_letter}. {task.title}
-                        {task.is_required && <span className="ml-1 text-xs text-red-500">*</span>}
-                      </span>
-                      {completedTasks.includes(task.id) && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                    </button>
-                  ))}
-                </div>
+    <div className="hidden w-64 flex-col border-r bg-muted/40 md:flex">
+      <div className="flex h-14 items-center border-b px-4">
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+          Mock Orals
+        </Link>
+      </div>
+      <div className="flex-1 overflow-auto py-2">
+        <nav className="grid gap-1 px-2">
+          {routes.map((route) => (
+            <Link
+              key={route.href}
+              href={route.href}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted",
+                route.active ? "bg-primary/10 text-primary" : "text-muted-foreground",
               )}
-            </div>
+            >
+              {route.icon}
+              {route.label}
+            </Link>
           ))}
-        </div>
+        </nav>
+      </div>
+      <div className="sticky bottom-0 border-t bg-muted/40 p-4">
+        <Button asChild className="w-full">
+          <Link href="/sessions/new">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Session
+          </Link>
+        </Button>
       </div>
     </div>
   )
