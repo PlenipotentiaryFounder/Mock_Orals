@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AcsSidebar } from "@/components/acs-sidebar"
-import { ElementView } from "@/components/element-view"
 import { getSessionWithTemplate } from "@/lib/supabase/data-fetchers"
-import { Printer, FileText } from "lucide-react"
+import { TasksList } from "@/components/TasksList"
+import { TaskPanel } from "@/components/TaskPanel"
+import { SessionHeader } from "@/components/SessionHeader"
 
 export default function SessionPage() {
   const { id } = useParams()
@@ -20,12 +17,14 @@ export default function SessionPage() {
 
   useEffect(() => {
     const fetchSession = async () => {
+      setLoading(true)
       try {
         const sessionData = await getSessionWithTemplate(id as string)
-
         if (sessionData) {
           setSession(sessionData.session)
           setTemplate(sessionData.template)
+        } else {
+           console.error("Session data not found for ID:", id)
         }
       } catch (error) {
         console.error("Error fetching session:", error)
@@ -33,7 +32,6 @@ export default function SessionPage() {
         setLoading(false)
       }
     }
-
     if (id) {
       fetchSession()
     }
@@ -44,82 +42,69 @@ export default function SessionPage() {
     setCurrentArea(area)
   }
 
+  const handleMarkComplete = (taskId: string) => {
+    // Here you would implement the actual completion logic
+    // For now, we'll just update the local state
+    if (currentTask && currentTask.id === taskId) {
+      const updatedTask = {
+        ...currentTask,
+        status: currentTask.status === "completed" ? "in_progress" : "completed"
+      }
+      setCurrentTask(updatedTask)
+    }
+  }
+
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading session...</div>
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center space-y-4">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+          <p className="text-muted-foreground">Loading session...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!session) {
-    return <div className="flex items-center justify-center h-screen">Session not found</div>
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+        <div className="max-w-md text-center p-6 bg-white rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">Session Not Found</h2>
+          <p className="text-muted-foreground mb-4">
+            The requested session could not be found or failed to load.
+          </p>
+          <a href="/sessions" className="text-blue-600 hover:underline">
+            Return to Sessions List
+          </a>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex h-screen">
-      <AcsSidebar onTaskSelect={handleTaskSelect} sessionId={id as string} />
-
-      <div className="flex-1 overflow-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">{session.session_name}</h1>
-            <p className="text-muted-foreground">{template?.name}</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Printer className="mr-2 h-4 w-4" />
-              Print
-            </Button>
-            <Button>
-              <FileText className="mr-2 h-4 w-4" />
-              Generate Report
-            </Button>
+    <div className="flex flex-col h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-6">
+        <div className="space-y-6">
+          <SessionHeader session={session} template={template} />
+          
+          <div className="grid grid-cols-4 gap-6">
+            <div className="col-span-1">
+              <TasksList 
+                onTaskSelect={handleTaskSelect} 
+                sessionId={id as string}
+              />
+            </div>
+            
+            <div className="col-span-3">
+              <TaskPanel 
+                currentTask={currentTask} 
+                currentArea={currentArea} 
+                sessionId={id as string}
+                onMarkComplete={handleMarkComplete}
+              />
+            </div>
           </div>
         </div>
-
-        {currentTask ? (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>
-                      {currentArea.title} - {currentTask.order_letter}. {currentTask.title}
-                    </CardTitle>
-                    <CardDescription>{currentTask.objective}</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      Mark Complete
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="knowledge">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="knowledge">Knowledge Elements</TabsTrigger>
-                    <TabsTrigger value="risk">Risk Management Elements</TabsTrigger>
-                    <TabsTrigger value="skill">Skills Elements</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="knowledge">
-                    <ElementView taskId={currentTask.id} sessionId={id as string} elementType="knowledge" />
-                  </TabsContent>
-                  <TabsContent value="risk">
-                    <ElementView taskId={currentTask.id} sessionId={id as string} elementType="risk" />
-                  </TabsContent>
-                  <TabsContent value="skill">
-                    <ElementView taskId={currentTask.id} sessionId={id as string} elementType="skill" />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)]">
-            <h2 className="text-xl font-semibold mb-2">Select a Task</h2>
-            <p className="text-muted-foreground text-center max-w-md">
-              Select a task from the sidebar to begin evaluating the student on specific elements.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )

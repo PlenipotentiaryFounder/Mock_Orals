@@ -254,12 +254,12 @@ export const getCompletedTasksForSession = async (sessionId: string): Promise<st
 export const getElementScoresForSession = async (
   sessionId: string,
   elementIds?: string[],
-): Promise<Record<string, { score: number; comment: string }>> => {
+): Promise<Record<string, { score: number; comment: string; instructor_mentioned: boolean; student_mentioned: boolean }>> => {
   const supabase = createClient()
 
   let query = supabase
     .from("session_elements")
-    .select("element_id, score, instructor_comment")
+    .select("element_id, score, instructor_comment, instructor_mentioned, student_mentioned")
     .eq("session_id", sessionId)
 
   if (elementIds && elementIds.length > 0) {
@@ -273,11 +273,13 @@ export const getElementScoresForSession = async (
     return {}
   }
 
-  const scores: Record<string, { score: number; comment: string }> = {}
+  const scores: Record<string, { score: number; comment: string; instructor_mentioned: boolean; student_mentioned: boolean }> = {}
   data.forEach((item) => {
     scores[item.element_id] = {
       score: item.score,
       comment: item.instructor_comment || "",
+      instructor_mentioned: item.instructor_mentioned || false,
+      student_mentioned: item.student_mentioned || false,
     }
   })
 
@@ -290,6 +292,8 @@ export const saveElementScore = async (
   elementId: string,
   score: number,
   comment = "",
+  instructorMentioned = false,
+  studentMentioned = false
 ): Promise<boolean> => {
   const supabase = createClient()
   const { error } = await supabase.from("session_elements").upsert({
@@ -297,6 +301,8 @@ export const saveElementScore = async (
     element_id: elementId,
     score: score,
     instructor_comment: comment,
+    instructor_mentioned: instructorMentioned,
+    student_mentioned: studentMentioned,
   })
 
   if (error) {
@@ -348,7 +354,12 @@ export const getElementViewData = async (
   elements: ElementData[]
   instructorNotes: Record<string, InstructorNoteData[]>
   sampleQuestions: Record<string, SampleQuestionData[]>
-  scores: Record<string, { score: number; comment: string }>
+  scores: Record<string, { 
+    score: number; 
+    comment: string;
+    instructor_mentioned: boolean;
+    student_mentioned: boolean;
+  }>
 } | null> => {
   try {
     // Get elements for this task and type
