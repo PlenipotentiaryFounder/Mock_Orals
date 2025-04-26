@@ -1,96 +1,84 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { getStudentsByUserId, type StudentData } from "@/lib/supabase/data-fetchers"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Metadata } from "next"
+import { cookies } from "next/headers"
 import Link from "next/link"
+
+import { createServerClient } from "@/lib/supabase/server"
+import { StudentCard } from "./components/student-card"
+import { EmptyStudents } from "./components/empty-students"
+import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
+import { StudentData } from "@/lib/supabase/data-fetchers-fix" // Assuming this type is suitable
 
-export default function StudentsPage() {
-  const router = useRouter()
-  const [students, setStudents] = useState<StudentData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export const metadata: Metadata = {
+  title: "My Students",
+  description: "View and manage students assigned to you",
+}
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      setLoading(true)
-      setError(null)
+// Function to fetch students assigned to the instructor
+async function getStudentsForInstructor(instructorId: string): Promise<StudentData[]> {
+  const supabase = createServerClient()
+  const { data, error } = await supabase
+    .from('students')
+    .select('*') // Select all columns for now, adjust as needed
+    .eq('instructor_id', instructorId)
+    .order("full_name", { ascending: true })
+    
+  if (error) {
+    console.error("Error fetching students for instructor:", error)
+    // Handle error appropriately, maybe return empty array or throw
+    return []
+  }
+  
+  return data || []
+}
 
-      // Get user ID from localStorage
-      const storedUser = localStorage.getItem("mockOralUser")
-      if (!storedUser) {
-        router.push("/") // Redirect to login if not logged in
-        return
-      }
-
-      try {
-        const user = JSON.parse(storedUser)
-        if (!user || !user.id) {
-          throw new Error("User ID not found in local storage.")
-        }
-
-        const fetchedStudents = await getStudentsByUserId(user.id)
-        setStudents(fetchedStudents)
-      } catch (err: any) {
-        console.error("Error fetching students or parsing user data:", err)
-        setError(err.message || "Failed to load students.")
-        // Optionally redirect on error or show message
-        // router.push('/');
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStudents()
-  }, [router])
-
+export default async function StudentsPage() {
+  const cookieStore = cookies()
+  const supabase = createServerClient()
+  
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  
+  // Ensure the user is logged in and get their ID
+  const instructorId = session?.user?.id
+  if (!instructorId) {
+     // This should theoretically be handled by layout/middleware, 
+     // but as a fallback, show an empty state or redirect.
+     // For now, we'll show the empty state.
+     console.warn("Students page accessed without a valid session.")
+     return <EmptyStudents message="Please log in to view your students." />
+  }
+  
+  // Fetch students specifically for this instructor
+  const students = await getStudentsForInstructor(instructorId)
+  
   return (
-    <main className="flex w-full flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-2">
-        <div className="space-y-1 p-4">
-          <h2 className="text-2xl font-semibold tracking-tight">Manage Students</h2>
-          <p className="text-sm text-muted-foreground">View and manage your student records.</p>
+    <div className="flex flex-col space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">My Students</h2>
+          <p className="text-muted-foreground">
+            View and manage students assigned to you.
+          </p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          {/* Link to a future 'add student' page/modal */}
-          <Button disabled> {/* Disabled for now */}
+        <Link href="/students/new">
+          <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Student
           </Button>
-        </div>
+        </Link>
       </div>
-
-      {loading && <div className="p-4 text-center">Loading students...</div>}
-      {error && <div className="p-4 text-center text-red-600">Error: {error}</div>}
-
-      {!loading && !error && (
-        <div className="grid gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
-          {students.length > 0 ? (
-            students.map((student) => (
-              <Card key={student.id}>
-                <CardHeader>
-                  <CardTitle>{student.full_name}</CardTitle>
-                  {student.email && <CardDescription>{student.email}</CardDescription>}
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Added on: {new Date(student.created_at).toLocaleDateString()}
-                  </p>
-                  {/* Add more student details or actions here */}
-                </CardContent>
-                {/* Optional CardFooter for actions like 'View Sessions' or 'Edit' */}
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full p-4 text-center text-muted-foreground">
-              No students found. Add your first student to get started.
-            </div>
-          )}
+      
+      {students.length === 0 ? (
+        <EmptyStudents />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {students.map((student) => (
+            <StudentCard key={student.id} student={student} />
+          ))}
         </div>
       )}
-    </main>
+    </div>
   )
 } 
