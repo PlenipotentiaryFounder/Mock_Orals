@@ -1,0 +1,169 @@
+File Structure Overview
+app
+page.tsx: Main entry point for the app.
+layout.tsx: Layout configuration for the app.
+forgot-password
+page.tsx: Handles the forgot password functionality.
+login
+page.tsx: Manages user login.
+api
+students: No files found.
+dev
+create-user
+route.ts: Handles user creation logic.
+db-test: No files found.
+users
+route.ts: Manages user-related API routes.
+route.ts.sessions_query_backup: Backup of session queries.
+register
+page.tsx: Manages user registration.
+get-started
+page.tsx: Initial setup or onboarding page.
+students
+page.tsx: Displays student-related information.
+page-interim.tsx: Interim page for student data.
+components
+empty-students.tsx: Component for displaying when no students are present.
+student-card.tsx: Component for displaying student details.
+reports
+page.tsx: Overview of reports.
+[id]
+page.tsx: Detailed report view for a specific ID.
+sessions
+page.tsx: Overview of sessions.
+[[...slug]]: No files found.
+new
+page.tsx: Page for creating new sessions.
+[id]
+page.tsx: Detailed session view for a specific ID.
+debug: No files found.
+dashboard
+layout.tsx: Layout for the dashboard.
+page.tsx: Main dashboard page.
+unctionality Overview
+Authentication Check:
+The useEffect hook is used to perform an authentication check when the component mounts.
+It creates a Supabase client and retrieves the current session using supabase.auth.getSession().
+If a session exists (i.e., the user is logged in), the user is redirected to the /dashboard page.
+If no session is found (i.e., the user is not logged in), the user is redirected to the /register page.
+Loading Indicator:
+While the authentication check is in progress, a loading spinner is displayed to the user.
+User Relationship
+Authenticated User: The page checks if the user is authenticated by verifying the session. Based on the session status, it redirects the user to the appropriate page (dashboard for logged-in users, register for new users).
+The app/layout.tsx file defines the layout configuration for your application. Here's a breakdown of its functionality:
+Functionality Overview
+Font and Theme:
+The Inter font from Google Fonts is imported and applied to the body of the document.
+A ThemeProvider component is used to manage the theme of the application. It supports system themes and defaults to a light theme.
+HTML Structure:
+The layout wraps the application in an HTML structure with a language attribute set to English.
+The suppressHydrationWarning attribute is used to prevent hydration warnings in React.
+Children Prop:
+The children prop is used to render nested components within the layout, allowing for a consistent structure across different pages.
+User Relationship
+User Data: This file does not directly interact with user data or authentication. It primarily focuses on the visual and structural aspects of the application.
+
+### Forgot Password Page (app/forgot-password/page.tsx)
+
+- **Functionality Overview**:
+  - Utilizes a form to collect the user's email address for password reset.
+  - Uses Supabase to send a password reset email with a redirect link to `/reset-password`.
+  - Displays success or error messages based on the outcome of the password reset request.
+  - Includes a link to navigate back to the login page.
+
+- **User Relationship**:
+  - Interacts with the user by collecting their email address for password reset.
+  - Provides feedback to the user through success and error alerts.
+  - Redirects the user to the login page after a successful password reset request.
+
+### Login Page (app/login/page.tsx)
+
+- **Functionality Overview**:
+  - Provides a form for users to enter their email and password to log in.
+  - Uses Supabase for authentication by signing in with email and password.
+  - Displays error messages if login fails.
+  - Redirects users to the dashboard upon successful login.
+  - Includes a link to the forgot password page and a prompt to sign up if the user doesn't have an account.
+
+- **User Relationship**:
+  - Directly interacts with the user by collecting login credentials.
+  - Provides feedback through error alerts if login fails.
+  - Manages user session and redirects authenticated users to the dashboard.
+
+### Register Page (app/register/page.tsx)
+
+- **Functionality Overview**:
+  - Provides separate registration forms for students and instructors.
+  - Collects user information including full name, email, phone, password, and certifications.
+  - Fetches available pilot certifications from the database.
+  - Uses Supabase for user registration and handles different roles (student or instructor).
+  - Displays success or error messages based on the registration outcome.
+  - Supports a development mode for bypassing Row Level Security (RLS) during development.
+
+- **User Relationship**:
+  - Directly interacts with the user by collecting registration details.
+  - Provides feedback through success and error alerts.
+  - Differentiates user roles and customizes the registration process accordingly.
+
+### Get Started Page (app/get-started/page.tsx)
+
+- **Functionality Overview**:
+  - Provides an introduction to the platform for new users.
+  - Offers two options for users to proceed as either a student or an instructor.
+  - Redirects users to the registration page based on their selected role.
+  - Highlights the benefits and features available for each role.
+
+- **User Relationship**:
+  - Engages new users by presenting role-specific features and benefits.
+  - Guides users to the appropriate registration path based on their role selection.
+
+### Students Page (app/students/page.tsx)
+
+- **Functionality Overview**:
+  - Displays a list of students assigned to the logged-in instructor.
+  - Fetches student data from the database using the instructor's ID.
+  - Provides an option to add new students via a link to the student creation page.
+  - Shows an empty state message if no students are assigned or if the user is not logged in.
+
+- **User Relationship**:
+  - Directly interacts with the instructor by displaying their assigned students.
+  - Requires user authentication to access student data.
+  - Allows instructors to manage their students by adding new ones.
+
+### Reports Page (app/reports/page.tsx)
+
+- **Functionality Overview**:
+  - Currently serves as a placeholder for the reports overview.
+  - Displays a title and a message indicating where the report list will be shown.
+  - Intended to fetch and display a list of reports in the future.
+
+- **User Relationship**:
+  - Does not currently interact with user data or authentication.
+  - Future implementation will likely involve displaying user-specific reports.
+
+### Detailed Report Page (app/reports/[id]/page.tsx)
+
+- **Functionality Overview**:
+  - Fetches and displays detailed session reports based on the session ID.
+  - Includes session information, task performance, and element-level details.
+  - Provides options to print or download the report as a PDF.
+  - Highlights areas of strength and areas needing improvement based on task scores.
+
+- **User Relationship**:
+  - Displays user-specific session reports, requiring user authentication.
+  - Allows users to review detailed performance metrics and feedback.
+  - Enhances user engagement by providing actionable insights and feedback.
+
+### Sessions Page (app/sessions/page.tsx)
+
+- **Functionality Overview**:
+  - Displays a list of flight training sessions for the logged-in user.
+  - Filters sessions based on user role (instructor or student).
+  - Instructors can view and manage sessions they created.
+  - Students can view sessions they participated in.
+  - Handles empty states and errors in session fetching.
+
+- **User Relationship**:
+  - Requires user authentication to access session data.
+  - Provides role-specific views and actions.
+  - Enhances user engagement with interactive elements for session management.

@@ -4,10 +4,24 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { CalendarDays, FileText, PlusCircle, Users } from "lucide-react"
+import { CalendarDays, FileText, PlusCircle, Users, CheckCircle, LogOut } from "lucide-react"
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 export function AcsSidebar() {
   const pathname = usePathname()
+  const [user, setUser] = useState(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setUser(session.user)
+      }
+    }
+    fetchUser()
+  }, [])
 
   const routes = [
     {
@@ -61,10 +75,17 @@ export function AcsSidebar() {
         </nav>
       </div>
       <div className="sticky bottom-0 border-t bg-muted/40 p-4">
-        <Button asChild className="w-full">
-          <Link href="/sessions/new">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Session
+        {user && (
+          <div className="flex flex-col items-center text-center mb-4">
+            <span className="font-medium">{user.user_metadata?.full_name || user.email}</span>
+            <span className="text-sm text-muted-foreground">{user.email}</span>
+            <CheckCircle className="h-4 w-4 text-green-500 mt-1" />
+          </div>
+        )}
+        <Button asChild className="w-full mt-2">
+          <Link href="#" onClick={() => supabase.auth.signOut()}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Log Out
           </Link>
         </Button>
       </div>
