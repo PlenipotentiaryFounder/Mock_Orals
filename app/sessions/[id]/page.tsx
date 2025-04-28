@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState, Suspense, useMemo } from "react"
 import { useParams } from "next/navigation"
 import { 
   getSessionWithDetails, 
@@ -47,6 +47,24 @@ function SessionPageContent() {
     const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
     const [progressValue, setProgressValue] = useState(0); // Keep placeholder progress state
     const [error, setError] = useState<string | null>(null); // State for error messages
+
+    // Progress calculation from hierarchy
+    const progressMetrics = useMemo(() => {
+        let completed = 0;
+        let total = 0;
+        let issues = 0;
+        hierarchy.forEach(area => {
+            area.tasks.forEach(task => {
+                task.elements.forEach(el => {
+                    total++;
+                    if (el.status === "completed") completed++;
+                    if (el.status === "issue") issues++;
+                });
+            });
+        });
+        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+        return { completed, total, issues, percentage };
+    }, [hierarchy]);
 
     // Fetch Session, Template, Scenario details
     useEffect(() => {
@@ -146,11 +164,11 @@ function SessionPageContent() {
     return (
         <CommandCenterLayout 
             title={session.session_name || "Session"}
-            progress={progressValue} // TODO: Calculate real progress
+            progress={progressMetrics.percentage}
             navigationPanel={
                 <NavigationPanel 
                     hierarchy={hierarchy}
-                    isLoading={loadingHierarchy} // Pass hierarchy loading state
+                    isLoading={loadingHierarchy}
                     onElementSelect={handleElementSelect}
                     initialSelectedElementId={selectedElementId}
                 />
@@ -163,7 +181,10 @@ function SessionPageContent() {
                 <StatusPanel 
                     session={session} 
                     template={template} 
-                    // TODO: Pass real progress metrics
+                    completed={progressMetrics.completed}
+                    total={progressMetrics.total}
+                    issues={progressMetrics.issues}
+                    percentage={progressMetrics.percentage}
                 />
             }
             commandBar={

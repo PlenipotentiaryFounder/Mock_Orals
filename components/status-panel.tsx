@@ -19,9 +19,13 @@ import { Progress } from "@/components/ui/progress"
 interface StatusPanelProps {
   session: any
   template: any
+  completed: number
+  total: number
+  issues: number
+  percentage: number
 }
 
-export function StatusPanel({ session, template }: StatusPanelProps) {
+export function StatusPanel({ session, template, completed, total, issues, percentage }: StatusPanelProps) {
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "N/A"
@@ -48,14 +52,6 @@ export function StatusPanel({ session, template }: StatusPanelProps) {
       return `${hours}h ${minutes % 60}m`
     }
     return `${minutes}m`
-  }
-
-  // Mock data for progress metrics
-  const progressMetrics = {
-    completed: 12,
-    total: 32,
-    issues: 3,
-    percentage: 38,
   }
 
   return (
@@ -91,16 +87,16 @@ export function StatusPanel({ session, template }: StatusPanelProps) {
         <div className="flex items-center gap-1.5">
           <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
           <span>
-            Progress: {progressMetrics.completed}/{progressMetrics.total}
+            Progress: {completed}/{total}
           </span>
-          <Progress value={progressMetrics.percentage} className="w-20 h-1.5 ml-1" />
+          <Progress value={percentage} className="w-20 h-1.5 ml-1" />
         </div>
 
         {/* Issues indicator */}
-        {progressMetrics.issues > 0 && (
+        {issues > 0 && (
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-            <span className="text-amber-500">{progressMetrics.issues} Issues</span>
+            <span className="text-amber-500">{issues} Issues</span>
           </div>
         )}
 
