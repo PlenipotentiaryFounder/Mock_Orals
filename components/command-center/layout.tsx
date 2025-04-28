@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { WorkspacePanel } from "./workspace-panel"
+import { WorkspacePanel } from "@/components/workspace-panel"
 import { cn } from "@/lib/utils"
 import { useHotkeys } from "react-hotkeys-hook"
 import { Keyboard, Maximize2, Minimize2 } from "lucide-react"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -167,13 +167,11 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
   }
 
   const getStatusBadge = () => {
-    // Use performance state which reflects user selection until saved
-    // Or could use element.performanceData?.performance_status for saved status
-    const currentPerformance = performance; // Reflects UI state
+    const currentPerformance = performance;
 
     switch (currentPerformance) {
       case "satisfactory":
-        return <Badge variant="success" className="ml-2">Satisfactory</Badge>;
+        return <Badge variant="default" className="ml-2">Satisfactory</Badge>; 
       case "unsatisfactory":
         return <Badge variant="destructive" className="ml-2">Unsatisfactory</Badge>;
       case "not-observed":
@@ -263,7 +261,7 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
                     <div>
                       <Label className="text-xs font-medium">Performance Criteria</Label>
                       <ul className="mt-1 list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                        {element.performance_criteria.map((criterion, index) => (
+                        {element.performance_criteria.map((criterion: string, index: number) => (
                           <li key={index}>{criterion}</li>
                         ))}
                       </ul>
@@ -326,7 +324,7 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
                     <div>
                       <Label className="text-xs font-medium">Common Errors / Points of Failure</Label>
                       <ul className="mt-1 list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                         {element.common_errors.map((error, index) => (
+                         {element.common_errors.map((error: string, index: number) => (
                            <li key={index}>{error}</li>
                          ))}
                        </ul>
@@ -338,7 +336,7 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
                     <div>
                         <Label className="text-xs font-medium">References</Label>
                         <div className="mt-1 space-x-1">
-                            {element.references.map((ref, index) => (
+                            {element.references.map((ref: string, index: number) => (
                                 <Badge key={index} variant="secondary">{ref}</Badge>
                             ))}
                         </div>
@@ -394,7 +392,7 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
                </TabsContent>
 
             </ScrollArea>
-          </div>
+          </Tabs>
         </div>
 
         {/* Right Side: Quick Notes Panel */}

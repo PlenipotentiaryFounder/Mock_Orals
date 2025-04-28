@@ -77,7 +77,7 @@ export function CommandBar({ session, template, onViewChange, currentView = "sta
         <div className="flex items-center gap-2">
           <h1 className="text-base font-semibold text-primary truncate max-w-[240px]">{session.session_name}</h1>
           {session.status && (
-            <Badge variant={session.status === "Completed" ? "success" : "secondary"} className="flex-shrink-0">
+            <Badge variant={session.status === "Completed" ? "default" : "secondary"} className="flex-shrink-0">
               {session.status}
             </Badge>
           )}

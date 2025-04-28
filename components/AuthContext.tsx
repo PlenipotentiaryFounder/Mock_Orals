@@ -1,12 +1,22 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-const AuthContext = createContext(null);
+// Define context type
+interface AuthContextType {
+  session: any; // Replace 'any' with Session type from @supabase/supabase-js if available
+}
 
-export const AuthProvider = ({ children }) => {
-  const [session, setSession] = useState(null);
+const AuthContext = createContext<AuthContextType | null>(null);
+
+// Add type for props
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [session, setSession] = useState<any>(null); // Use Session type here too
   const supabase = createClient();
 
   useEffect(() => {
@@ -14,10 +24,10 @@ export const AuthProvider = ({ children }) => {
       setSession(session);
     });
 
-    // Check if authListener is defined and has an unsubscribe method
+    // Check if authListener and its subscription are defined and unsubscribe
     return () => {
-      if (authListener && typeof authListener.unsubscribe === 'function') {
-        authListener.unsubscribe();
+      if (authListener?.subscription && typeof authListener.subscription.unsubscribe === 'function') {
+        authListener.subscription.unsubscribe();
       }
     };
   }, [supabase]);

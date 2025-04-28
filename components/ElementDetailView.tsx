@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getElementDetails, saveElementScore, ElementFullData } from "@/lib/supabase/data-fetchers";
+import { fetchElementDetails, saveElementEvaluation, ElementFullData } from "@/lib/supabase/data-fetchers";
 import { 
     Loader2, 
     BookOpen, 
@@ -46,24 +46,25 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Local state for interactive elements, initialized from fetched data
-  const [currentScore, setCurrentScore] = useState<number | null>(null);
+  // Remove state related to old score/mention logic
+  // const [currentScore, setCurrentScore] = useState<number | null>(null);
   const [currentComment, setCurrentComment] = useState<string>("");
-  const [instructorMentioned, setInstructorMentioned] = useState<boolean>(false);
-  const [studentMentioned, setStudentMentioned] = useState<boolean>(false);
+  // const [instructorMentioned, setInstructorMentioned] = useState<boolean>(false);
+  // const [studentMentioned, setStudentMentioned] = useState<boolean>(false);
+  
+  // Keep performance state (satisfactory, unsatisfactory, not-observed)
+  const [performance, setPerformance] = useState<"satisfactory" | "unsatisfactory" | "not-observed">("not-observed");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getElementDetails(elementId, sessionId);
+      const data = await fetchElementDetails(elementId, sessionId);
       if (data) {
         setElementData(data);
-        // Initialize local state from fetched data
-        setCurrentScore(data.scoreData?.score ?? null);
-        setCurrentComment(data.scoreData?.comment ?? "");
-        setInstructorMentioned(data.scoreData?.instructor_mentioned ?? false);
-        setStudentMentioned(data.scoreData?.student_mentioned ?? false);
+        // Initialize local state from performanceData
+        setCurrentComment(data.performanceData?.comment ?? "");
+        setPerformance(data.performanceData?.performance_status || "not-observed");
       } else {
         setError("Element details not found.");
         setElementData(null);
@@ -79,24 +80,33 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]); // Rerun when elementId or sessionId changes
+  }, [fetchData]);
 
   const handleSave = useCallback(async () => {
     if (!elementData) return;
     setSaving(true);
     try {
-      const success = await saveElementScore(
+      // Pass performance and comment to save function
+      const success = await saveElementEvaluation(
         sessionId,
         elementId,
-        currentScore,
+        performance, // Use performance state
         currentComment,
-        instructorMentioned,
-        studentMentioned
+        // instructorMentioned, // Removed
+        // studentMentioned // Removed
       );
       if (success) {
-        toast({ title: "Saved", description: `Score for ${elementData.code} updated.`, variant: "success" });
+        toast({ title: "Saved", description: `Evaluation for ${elementData.code} updated.`, variant: "default" });
+        // Update local state to reflect saved data
+        setElementData(prev => prev ? ({ 
+            ...prev, 
+            performanceData: { 
+                performance_status: performance, 
+                comment: currentComment 
+            }
+        }) : null);
       } else {
-        throw new Error("Failed to save score to database.");
+        throw new Error("Failed to save evaluation to database.");
       }
     } catch (err: any) {
       console.error("Error saving element data:", err);
@@ -104,7 +114,8 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
     } finally {
       setSaving(false);
     }
-  }, [sessionId, elementId, currentScore, currentComment, instructorMentioned, studentMentioned, elementData, toast]);
+  // Depend on performance and comment state
+  }, [sessionId, elementId, performance, currentComment, elementData, toast]); 
 
   // --- UI Rendering --- 
 
@@ -203,53 +214,22 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
                                     </TooltipProvider>
                                 </Label>
                                 <RadioGroup
-                                    value={currentScore?.toString() ?? ""} // Use local state
-                                    onValueChange={(value) => setCurrentScore(value ? Number.parseInt(value) : null)}
+                                    value={performance} // Bind to performance state
+                                    onValueChange={(value) => setPerformance(value as any)}
                                     className="flex flex-wrap gap-2"
                                 >
-                                    {scoreOptions.map(option => (
-                                        <Label 
-                                            key={option.value}
-                                            htmlFor={`score-${option.value}-${elementId}`}
-                                            className={cn(
-                                                "flex items-center gap-2 p-2 border rounded-md cursor-pointer transition-colors text-xs font-medium",
-                                                "hover:bg-accent hover:text-accent-foreground",
-                                                currentScore === option.value ? "bg-primary text-primary-foreground border-primary" : "bg-background"
-                                            )}
-                                        >
-                                            <RadioGroupItem value={option.value.toString()} id={`score-${option.value}-${elementId}`} className="sr-only"/>
-                                            {option.label}
-                                        </Label>
-                                    ))}
+                                    {/* Remove old score options */}
+                                    {/* Map performance options if needed, but current setup uses explicit items */}
                                 </RadioGroup>
                             </div>
 
-                            {/* Mentions */}
+                            {/* Remove Mentions section */}
+                            {/* 
                              <div>
                                 <Label className="text-sm font-medium mb-2 block">Interaction</Label>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox 
-                                            id={`instructor-${elementId}`} 
-                                            checked={instructorMentioned} // Use local state
-                                            onCheckedChange={(checked) => setInstructorMentioned(checked as boolean)}
-                                        />
-                                        <Label htmlFor={`instructor-${elementId}`} className="text-xs font-normal cursor-pointer flex items-center gap-1.5">
-                                            <ThumbsDown className="h-4 w-4 text-red-600"/> Prompted by Instructor
-                                        </Label>
-                                    </div>
-                                     <div className="flex items-center gap-2">
-                                        <Checkbox 
-                                            id={`student-${elementId}`} 
-                                            checked={studentMentioned} // Use local state
-                                            onCheckedChange={(checked) => setStudentMentioned(checked as boolean)}
-                                        />
-                                        <Label htmlFor={`student-${elementId}`} className="text-xs font-normal cursor-pointer flex items-center gap-1.5">
-                                            <ThumbsUp className="h-4 w-4 text-green-600"/> Mentioned by Student
-                                        </Label>
-                                    </div>
-                                </div>
-                            </div>
+                                ... checkboxes ...
+                            </div> 
+                            */}
 
                         </div>
                         

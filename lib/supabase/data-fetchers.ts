@@ -92,16 +92,19 @@ export type ElementBasic = {
 export type TaskWithElements = TaskData & { elements: ElementBasic[] };
 export type AreaWithTasksAndElements = AreaData & { tasks: TaskWithElements[] };
 
-// Type for combined element details
+// Type for combined element details - Updated definition
 export type ElementFullData = ElementData & {
     instructorNotes: InstructorNoteData[];
     sampleQuestions: SampleQuestionData[];
-    scoreData: { 
-        score: number | null; // Allow null for score
+    // Add missing fields based on elements table structure and fetchElementDetails logic
+    performance_criteria?: string[]; // Assuming these might be stored as JSON or fetched separately if normalized
+    common_errors?: string[]; 
+    references?: string[]; 
+    // Define the structure for session-specific performance data
+    performanceData: { 
+        performance_status: 'satisfactory' | 'unsatisfactory' | 'not-observed';
         comment: string; 
-        instructor_mentioned: boolean; 
-        student_mentioned: boolean; 
-    } | null; // Score data might not exist yet
+    } | null; // Performance data might not exist yet for a session
 };
 
 // Cache for frequently accessed data
