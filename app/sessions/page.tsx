@@ -1,197 +1,172 @@
 import Link from "next/link"
 import { cookies } from "next/headers"
-import { createServerClient } from "@/lib/supabase/server"
-import { PlusCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/utils"
+import { getUserSessions, SessionListItem } from "@/lib/supabase/data-fetchers"
+import { PlusCircle, User, GraduationCap, BookOpen, CalendarDays, CheckCircle, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDate } from "@/lib/utils"
+import { Separator } from "@/components/ui/separator"
 
 // Helper component for displaying empty state
-const EmptySessions = ({ message = "No sessions found" }: { message?: string }) => (
-  <div className="flex flex-col items-center justify-center p-12 text-center border rounded-lg">
-    <h3 className="mt-4 text-lg font-semibold">No Sessions Yet</h3>
-    <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-    <Link href="/sessions/new" className="mt-4">
-      <Button>
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Create New Session
-      </Button>
-    </Link>
+const EmptySessions = ({ message = "No sessions found", showCreateButton = true }: { message?: string, showCreateButton?: boolean }) => (
+  <div className="flex flex-col items-center justify-center p-16 text-center border rounded-lg min-h-[40vh] bg-muted/40">
+    <CardTitle className="text-xl font-semibold mb-2">No Sessions Yet</CardTitle>
+    <p className="mb-6 text-sm text-muted-foreground max-w-xs">{message}</p>
+    {showCreateButton && (
+      <Link href="/sessions/new">
+        <Button size="lg">
+          <PlusCircle className="mr-2 h-5 w-5" />
+          Create New Session
+        </Button>
+      </Link>
+    )}
   </div>
 )
 
-// Session card component
-function SessionCard({ session }: { session: any }) {
+// Enhanced Session card component
+function SessionCard({ session }: { session: SessionListItem }) {
+  const isCompleted = !!session.date_completed;
+
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg line-clamp-1">
-            {session.session_name}
-          </CardTitle>
-          <Badge variant={session.date_completed ? "outline" : "secondary"}>
-            {session.date_completed ? "Completed" : "In Progress"}
+    <Card className="flex flex-col h-full shadow-md rounded-xl hover:shadow-xl hover:ring-2 hover:ring-blue-400 hover:ring-offset-2 transition-all duration-300 ease-in-out">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-center mb-2">
+          <Badge variant={isCompleted ? "outline" : "secondary"} className="text-xs">
+            {isCompleted ? <CheckCircle className="mr-1 h-3 w-3" /> : <Clock className="mr-1 h-3 w-3" />}
+            {isCompleted ? "Completed" : "In Progress"}
           </Badge>
+          {/* Optional: Add more badges or info here */}
         </div>
-        <CardDescription>
+        <CardTitle className="text-lg font-semibold line-clamp-2">
+          {session.session_name || "Unnamed Session"}
+        </CardTitle>
+        <CardDescription className="flex items-center text-xs text-muted-foreground">
+          <CalendarDays className="mr-1 h-3 w-3" />
           Started: {formatDate(session.date_started)}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="text-sm mb-2">
-          {session.student_name && (
-            <p>Student: {session.student_name}</p>
-          )}
-          {session.template_name && (
-            <p>Template: {session.template_name}</p>
-          )}
-        </div>
-        <Link href={`/sessions/${session.id}`}>
-          <Button variant="outline" className="w-full">View Details</Button>
-        </Link>
+      
+      <CardContent className="flex-grow space-y-3 text-sm">
+        {session.template_name && (
+          <div className="flex items-center text-muted-foreground">
+            <BookOpen className="mr-2 h-4 w-4 flex-shrink-0" /> 
+            <span>Template: {session.template_name}</span>
+          </div>
+        )}
+        {session.scenario_title && (
+           <div className="flex items-center text-muted-foreground">
+             <GraduationCap className="mr-2 h-4 w-4 flex-shrink-0" /> {/* Re-using icon, change if needed */}
+             <span>Scenario: {session.scenario_title}</span>
+           </div>
+        )}
+        <Separator />
+        {session.student_name && (
+          <div className="flex items-center">
+             <GraduationCap className="mr-2 h-4 w-4 flex-shrink-0" /> 
+             <span>Student: {session.student_name}</span>
+           </div>
+        )}
+        {session.instructor_name && (
+          <div className="flex items-center">
+             <User className="mr-2 h-4 w-4 flex-shrink-0" /> 
+             <span>Instructor: {session.instructor_name}</span>
+           </div>
+        )}
       </CardContent>
+
+      <CardFooter className="pt-4 border-t">
+        <Link href={`/sessions/${session.id}`} className="w-full">
+          <Button variant="outline" className="w-full">
+            View Details
+          </Button>
+        </Link>
+      </CardFooter>
     </Card>
   )
 }
 
 export default async function SessionsPage() {
-  // Get the user session
+  // Get the cookie store
   const cookieStore = cookies()
-  const supabase = createServerClient()
-  
+  // Create client using the updated util, passing the cookieStore
+  const supabase = createClient(cookieStore)
+
+  // Use getUser() for security
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  
-  // If no user is logged in, show the empty state
-  if (!session?.user) {
-    return <EmptySessions message="Please log in to view your sessions" />
+    data: { user }, // Get the user object directly
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  // If auth error or no user, show appropriate message
+  if (authError || !user) {
+     console.error("Authentication Error:", authError);
+     // Redirect to login or show specific error message?
+     // For now, show generic empty state
+     return <EmptySessions message="Please log in to view your sessions." showCreateButton={false} />
   }
-  
-  const userId = session.user.id
-  
-  // Get the user's role from the auth.users metadata
-  // This is stored when the user signs up or when their role is assigned
-  const { data: userData, error: userError } = await supabase
-    .from('auth.users')
-    .select('role:raw_user_meta_data->role')
-    .eq('id', userId)
-    .single()
-  
-  // If we can't get the role, try to determine it by checking tables
-  let userRole = userData?.role
-  
-  if (!userRole || userError) {
-    // Check if user exists in instructor table
-    const { data: instructorCheck } = await supabase
-      .from('instructor')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle()
-    
-    if (instructorCheck) {
-      userRole = 'instructor'
-    } else {
-      // Check if user exists in students table
-      const { data: studentCheck } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle()
-      
-      if (studentCheck) {
-        userRole = 'student'
-      }
+
+  const userId = user.id
+
+  // Fetch sessions using the updated function, passing the authenticated client
+  const sessions = await getUserSessions(supabase, userId)
+
+  // Determine user role (optional, for UI customization)
+  // This logic remains largely the same, but uses `user` object if needed
+  let userRole = 'unknown';
+  if (sessions.length > 0) {
+    const isInstructor = sessions.some(s => s.instructor_id === userId);
+    const isStudent = sessions.some(s => s.student_id === userId);
+    if (isInstructor) userRole = 'instructor';
+    else if (isStudent) userRole = 'student';
+  } else {
+    // Fallback: Check user metadata first (more efficient)
+    userRole = user.user_metadata?.role || 'unknown';
+
+    // If role still unknown, check DB tables as final fallback
+    if (userRole === 'unknown') {
+        const { data: instructorCheck } = await supabase.from('instructor').select('user_id', { count: 'exact', head: true }).eq('user_id', userId);
+        if (instructorCheck?.count && instructorCheck.count > 0) userRole = 'instructor';
+        else {
+            const { data: studentCheck } = await supabase.from('students').select('user_id', { count: 'exact', head: true }).eq('user_id', userId);
+            if (studentCheck?.count && studentCheck.count > 0) userRole = 'student';
+        }
     }
   }
-  
-  // Default to instructor if role couldn't be determined
-  userRole = userRole || 'instructor'
-  
-  let query
-  
-  // Filter sessions based on user role
-  if (userRole === 'instructor') {
-    // For instructors, get all sessions where they are the instructor
-    query = supabase
-      .from('sessions')
-      .select(`
-        id, 
-        session_name, 
-        date_started, 
-        date_completed,
-        student_id,  // Fetch the student_id (FK)
-        student:students!inner(user_id, full_name), // Fetch student name via relationship, ensuring user_id is selectable
-        template:templates!inner(id, name) // Use alias for template too
-      `)
-      // We need to filter where the session.student_id matches a students.user_id
-      // The select using !inner implicitly handles the join based on FKs
-      // Let's refine the select to be more explicit if needed, but start simple
-      .eq('instructor_id', userId) // Filter by instructor_id 
-      .order('date_started', { ascending: false })
-  } else {
-    // For students, get all sessions where they are the student
-    query = supabase
-      .from('sessions')
-      .select(`
-        id, 
-        session_name, 
-        date_started, 
-        date_completed,
-        instructor_id, // Fetch instructor_id (FK)
-        instructor:users!inner(email, raw_user_meta_data),
-        template:templates!inner(id, name) // Use alias for template
-      `)
-      .eq('student_id', userId) // student_id in sessions links to the student's user_id
-      .order('date_started', { ascending: false })
-  }
-  
-  const { data: sessions, error } = await query
-  
-  if (error) {
-    console.error("Error fetching sessions:", error.message)
-    return <EmptySessions message="Error loading sessions. Please try again later." />
-  }
-  
-  // Transform the data for display
-  const formattedSessions = sessions.map((session: any) => ({
-    id: session.id,
-    session_name: session.session_name,
-    date_started: session.date_started,
-    date_completed: session.date_completed,
-    // Adjust access based on aliases used in select
-    student_name: userRole === 'instructor' ? session.student?.full_name : null, 
-    instructor_name: userRole === 'student' ? (session.instructor?.raw_user_meta_data?.full_name || session.instructor?.email) : null,
-    template_name: session.template?.name 
-  }))
-  
+
+  // Determine if the create button should be shown (only for instructors)
+  const showCreateButton = userRole === 'instructor';
+
   return (
-    <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Sessions</h2>
-          <p className="text-muted-foreground">
-            {userRole === 'instructor' 
-              ? "View and manage your flight training sessions" 
+    <div className="container mx-auto px-4 py-8 md:py-12">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 md:mb-10">
+        <div className="mb-4 md:mb-0">
+          <h1 className="text-3xl font-bold tracking-tight">Sessions</h1>
+          <p className="mt-1 text-muted-foreground">
+            {userRole === 'instructor'
+              ? "View and manage your flight training sessions"
               : "View your flight training sessions"}
           </p>
         </div>
-        {userRole === 'instructor' && (
+        {showCreateButton && (
           <Link href="/sessions/new">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
+            <Button size="lg">
+              <PlusCircle className="mr-2 h-5 w-5" />
               New Session
             </Button>
           </Link>
         )}
       </div>
-      
-      {formattedSessions.length === 0 ? (
-        <EmptySessions />
+
+      {sessions.length === 0 ? (
+        <EmptySessions 
+           message={userRole === 'instructor' ? "Create your first session to get started." : "Your instructor hasn't created any sessions for you yet."}
+           showCreateButton={showCreateButton}
+         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {formattedSessions.map((session) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          {sessions.map((session) => (
             <SessionCard key={session.id} session={session} />
           ))}
         </div>

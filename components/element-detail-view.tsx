@@ -26,6 +26,8 @@ import {
   BookOpen,
   HelpCircle,
   ExternalLink,
+  Edit,
+  X,
 } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useHotkeys } from "react-hotkeys-hook"
@@ -50,6 +52,12 @@ import {
  * allowing instructors to quickly assess performance and document
  * observations with minimal friction.
  */
+interface QuickNote {
+  id: string
+  text: string
+  createdAt: number
+}
+
 interface ElementDetailViewProps {
   elementId: string
   sessionId: string
@@ -63,14 +71,12 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
   const [notes, setNotes] = useState("")
   const [performance, setPerformance] = useState<"satisfactory" | "unsatisfactory" | "not-observed">("not-observed")
   const [activeTab, setActiveTab] = useState("evaluation")
-  const [quickNotes, setQuickNotes] = useState<string[]>([
-    "Demonstrated proficiency in all required areas.",
-    "Needs improvement in communication and clarity.",
-    "Excellent situational awareness throughout the exercise.",
-    "Failed to follow proper procedures for this task.",
-  ])
-  const [newQuickNote, setNewQuickNote] = useState("")
-  const [showQuickNoteInput, setShowQuickNoteInput] = useState(false)
+  const [quickNotes, setQuickNotes] = useState<QuickNote[]>([])
+  const [newNote, setNewNote] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState("")
+
+  const storageKey = `quickNotes_${sessionId}_${elementId}`
 
   // Keyboard shortcuts for quick evaluation
   useHotkeys("alt+s", () => setPerformance("satisfactory"), [])
@@ -112,6 +118,21 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
     loadElementDetails();
   }, [elementId, sessionId]); // Re-run effect if elementId or sessionId changes
 
+  // Load notes from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(storageKey)
+    if (stored) {
+      setQuickNotes(JSON.parse(stored))
+    } else {
+      setQuickNotes([])
+    }
+  }, [storageKey])
+
+  // Save notes to localStorage
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(quickNotes))
+  }, [quickNotes, storageKey])
+
   const handleSave = async () => {
     if (!element) return; // Don't save if element data isn't loaded
     setSaving(true);
@@ -145,25 +166,28 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
     }
   };
 
-  const handleAddQuickNote = () => {
-    if (newQuickNote.trim()) {
-      setQuickNotes([...quickNotes, newQuickNote.trim()])
-      setNewQuickNote("")
-      setShowQuickNoteInput(false)
-    }
+  const handleAddNote = () => {
+    if (!newNote.trim()) return
+    setQuickNotes([
+      ...quickNotes,
+      { id: crypto.randomUUID(), text: newNote.trim(), createdAt: Date.now() }
+    ])
+    setNewNote("")
   }
 
-  const handleInsertQuickNote = (note: string) => {
-    setNotes((prev) => {
-      if (prev.trim()) {
-        return `${prev}\n\n${note}`
-      }
-      return note
-    })
+  const handleDeleteNote = (id: string) => {
+    setQuickNotes(quickNotes.filter(n => n.id !== id))
   }
 
-  const handleRemoveQuickNote = (index: number) => {
-    setQuickNotes(quickNotes.filter((_, i) => i !== index))
+  const handleEditNote = (id: string, text: string) => {
+    setEditingId(id)
+    setEditingText(text)
+  }
+
+  const handleSaveEdit = () => {
+    setQuickNotes(quickNotes.map(n => n.id === editingId ? { ...n, text: editingText } : n))
+    setEditingId(null)
+    setEditingText("")
   }
 
   const getStatusBadge = () => {
@@ -403,12 +427,12 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
                 {quickNotes.map((note, index) => (
                    <Card key={index} className="relative group bg-card text-xs shadow-sm">
                       <CardContent className="p-2 flex justify-between items-center">
-                         <p className="flex-1 mr-2 break-words">{note}</p>
+                         <p className="flex-1 mr-2 break-words">{note.text}</p>
                          <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleInsertQuickNote(note)} title="Insert Note">
-                               <MessageSquare className="h-3.5 w-3.5" />
+                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditNote(note.id, note.text)} title="Edit Note">
+                               <Edit className="h-3.5 w-3.5" />
                              </Button>
-                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveQuickNote(index)} title="Remove Quick Note">
+                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteNote(note.id)} title="Remove Quick Note">
                                 <Trash2 className="h-3.5 w-3.5" />
                              </Button>
                          </div>
@@ -419,21 +443,20 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
            </ScrollArea>
            {/* Add new quick note section */} 
            <div>
-                {showQuickNoteInput ? (
+                {editingId ? (
                     <div className="space-y-2">
                         <Textarea 
                            placeholder="Enter new quick note..."
-                           value={newQuickNote}
-                           onChange={(e) => setNewQuickNote(e.target.value)}
+                           value={editingText}
+                           onChange={(e) => setEditingText(e.target.value)}
                            className="text-xs min-h-[60px]"
                         />
                         <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => setShowQuickNoteInput(false)}>Cancel</Button>
-                            <Button size="sm" onClick={handleAddQuickNote} disabled={!newQuickNote.trim()}>Add</Button>
+                            <Button variant="ghost" size="sm" onClick={handleSaveEdit}>Save</Button>
                         </div>
                     </div>
                 ) : (
-                    <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setShowQuickNoteInput(true)}>
+                    <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setEditingId(crypto.randomUUID())}>
                        <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add New Quick Note
                     </Button>
                 )}
@@ -445,3 +468,5 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
     </Card>
   )
 }
+
+export default ElementDetailView

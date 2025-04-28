@@ -1,4 +1,6 @@
 import { createClient } from "./client"
+import { createClient as createBrowserClient } from '@/lib/supabase/client'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 // Type definitions for better type safety
 export type TemplateData = {
@@ -269,6 +271,44 @@ export const getSession = async (sessionId: string): Promise<SessionData | null>
 
   return data
 }
+
+// Define a type for the session list item with related names
+export type SessionListItem = SessionData & {
+  template_name: string | null;
+  student_name: string | null;
+  instructor_name: string | null;
+  scenario_title: string | null;
+};
+
+// NEW FUNCTION: Fetch sessions relevant to the current user (instructor or student)
+export const getUserSessions = async (
+  supabase: SupabaseClient<any, "public", any>,
+  userId: string
+): Promise<SessionListItem[]> => {
+  if (!userId) {
+    console.error("getUserSessions called without a userId.");
+    return [];
+  }
+
+  // Call the database function
+  const { data, error } = await supabase
+    .rpc('get_user_sessions_list', { user_id_param: userId });
+
+  if (error) {
+    // Log the full error if it happens
+    console.error("Error fetching user sessions via RPC:", JSON.stringify(error, null, 2)); 
+    return [];
+  }
+
+  if (!data) {
+    console.warn("No session data returned from RPC.");
+    return [];
+  }
+
+  // The data should already be in the correct format defined by the function's RETURN TABLE
+  // We just need to ensure the type matches SessionListItem (instructor_name, scenario_title)
+  return data as SessionListItem[]; 
+};
 
 // Session with template and potentially scenario data
 export const getSessionWithDetails = async (

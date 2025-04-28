@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  getSessionWithTemplate,
+  getSessionWithDetails,
   getTaskScoresForSession,
   getElementScoresWithDetailsForSession,
 } from "@/lib/supabase/data-fetchers"
@@ -23,7 +23,7 @@ export default function ReportPage() {
     const fetchReport = async () => {
       try {
         // Get session and template data
-        const sessionData = await getSessionWithTemplate(id as string)
+        const sessionData = await getSessionWithDetails(id as string)
         if (!sessionData) return
 
         setSession(sessionData.session)

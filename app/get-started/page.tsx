@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Pilot, Headphones } from "lucide-react"
+import { Plane, Headphones } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -30,7 +30,7 @@ export default function GetStartedPage() {
         <Card className="overflow-hidden transition-all hover:shadow-md">
           <CardHeader className="bg-blue-50">
             <div className="flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mx-auto mb-4">
-              <Pilot className="h-8 w-8 text-blue-600" />
+              <Plane className="h-8 w-8 text-blue-600" />
             </div>
             <CardTitle className="text-center">I'm a Student Pilot</CardTitle>
             <CardDescription className="text-center">
