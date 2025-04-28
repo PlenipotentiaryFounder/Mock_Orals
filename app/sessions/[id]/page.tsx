@@ -5,6 +5,8 @@ import { useParams } from "next/navigation"
 import { 
   getSessionWithDetails, 
   getFullHierarchy, // Import new fetcher
+  getSessionNotes, // Import notes fetcher
+  updateSessionNotes, // Import update function
   SessionData, // Import types
   TemplateData, 
   ScenarioData, 
@@ -40,6 +42,8 @@ function SessionPageContent() {
     const [template, setTemplate] = useState<TemplateData | null>(null);
     const [scenario, setScenario] = useState<ScenarioData | null>(null);
     const [hierarchy, setHierarchy] = useState<AreaWithTasksAndElements[]>([]);
+    const [sessionNotes, setSessionNotes] = useState<string>("");
+    const [loadingNotes, setLoadingNotes] = useState(true);
     
     // State for UI interactions
     const [loadingInitialData, setLoadingInitialData] = useState(true);
@@ -119,6 +123,22 @@ function SessionPageContent() {
             });
     }, [template?.id, sessionId]); // Depend on template ID and sessionId
 
+    // Fetch session notes
+    useEffect(() => {
+        if (!sessionId) return;
+        setLoadingNotes(true);
+        getSessionNotes(sessionId)
+            .then(notes => setSessionNotes(notes || ""))
+            .finally(() => setLoadingNotes(false));
+    }, [sessionId]);
+
+    // Save handler for notes
+    const handleSaveSessionNotes = async (notes: string) => {
+        const success = await updateSessionNotes(sessionId, notes);
+        if (success) setSessionNotes(notes);
+        // Optionally show a toast or error
+    };
+
     // Handler passed to the NavigationPanel
     const handleElementSelect = (elementId: string) => {
         setSelectedElementId(elementId);
@@ -174,8 +194,13 @@ function SessionPageContent() {
                 />
             }
             contextPanel={
-                scenario ? <ContextPanel scenario={scenario} /> : undefined
-                // TODO: Add session notes and history later
+                scenario ? (
+                  <ContextPanel 
+                    scenario={scenario} 
+                    sessionNotes={sessionNotes}
+                    onSaveSessionNotes={handleSaveSessionNotes}
+                  />
+                ) : undefined
             }
             statusPanel={
                 <StatusPanel 

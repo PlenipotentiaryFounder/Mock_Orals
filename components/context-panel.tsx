@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -34,61 +34,24 @@ import { Card, CardContent } from "@/components/ui/card"
  */
 interface ContextPanelProps {
   scenario: any
-  notes?: string[]
-  history?: any[]
+  sessionNotes: string
+  onSaveSessionNotes: (notes: string) => void
 }
 
-export function ContextPanel({ scenario, notes = [], history = [] }: ContextPanelProps) {
+export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes }: ContextPanelProps) {
   const [activeTab, setActiveTab] = useState("scenario")
-  const [newNote, setNewNote] = useState("")
-  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null)
-  const [editedNoteText, setEditedNoteText] = useState("")
+  const [notesValue, setNotesValue] = useState(sessionNotes)
+  const [saving, setSaving] = useState(false)
 
-  // Sample notes data to retain dynamic structure
-  const sampleNotes = [
-    "Pilot demonstrated excellent radio communication skills throughout the flight.",
-    "Need to work on maintaining proper altitude during approach phase.",
-    "Good situational awareness in challenging weather conditions.",
-  ]
+  // Keep notesValue in sync with prop
+  useEffect(() => {
+    setNotesValue(sessionNotes)
+  }, [sessionNotes])
 
-  // Sample history data
-  const sampleHistory = [
-    { action: "Element Completed", time: "10:23 AM", description: "ATC.3.2 marked as Satisfactory" },
-    { action: "Note Added", time: "10:15 AM", description: "Added note about radio communications" },
-    { action: "Session Started", time: "10:00 AM", description: "Evaluation session initiated" },
-  ]
-
-  // Use provided data or sample data
-  const displayNotes = notes.length > 0 ? notes : sampleNotes
-  const displayHistory = history.length > 0 ? history : sampleHistory
-
-  // Handle adding a new note
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      // In a real implementation, this would call an API to save the note
-      console.log("Adding note:", newNote)
-      setNewNote("")
-    }
-  }
-
-  // Handle editing a note
-  const startEditingNote = (index: number, text: string) => {
-    setEditingNoteIndex(index)
-    setEditedNoteText(text)
-  }
-
-  // Save edited note
-  const saveEditedNote = () => {
-    if (editedNoteText.trim() && editingNoteIndex !== null) {
-      // In a real implementation, this would call an API to update the note
-      console.log("Saving edited note:", editedNoteText)
-      setEditingNoteIndex(null)
-    }
-  }
-
-  // Cancel editing
-  const cancelEditing = () => {
-    setEditingNoteIndex(null)
+  const handleSave = async () => {
+    setSaving(true)
+    await onSaveSessionNotes(notesValue)
+    setSaving(false)
   }
 
   if (!scenario) return null
@@ -197,102 +160,26 @@ export function ContextPanel({ scenario, notes = [], history = [] }: ContextPane
           </TabsContent>
 
           <TabsContent value="notes" className="p-4 space-y-4 m-0">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-medium">Session Notes</h3>
-              <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                <PlusCircle className="h-3.5 w-3.5" />
-                <span>Add Note</span>
-              </Button>
-            </div>
-
-            {/* New note input */}
-            <div className="space-y-2">
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Session Notes</h3>
               <Textarea
-                placeholder="Enter a new note..."
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                className="min-h-[80px] text-xs"
+                value={notesValue}
+                onChange={e => setNotesValue(e.target.value)}
+                placeholder="Add general notes about this session..."
+                className="min-h-[120px]"
               />
-              <div className="flex justify-end">
-                <Button size="sm" onClick={handleAddNote} disabled={!newNote.trim()}>
-                  Add Note
+              <div className="flex justify-end mt-2">
+                <Button onClick={handleSave} disabled={saving || notesValue === sessionNotes} size="sm">
+                  {saving ? "Saving..." : "Save Notes"}
                 </Button>
               </div>
             </div>
-
-            <Separator />
-
-            {displayNotes.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground">No notes added yet</p>
-                <Button variant="ghost" size="sm" className="mt-2 h-7 text-xs">
-                  Add your first note
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {displayNotes.map((note, index) => (
-                  <div key={index} className="relative group">
-                    {editingNoteIndex === index ? (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={editedNoteText}
-                          onChange={(e) => setEditedNoteText(e.target.value)}
-                          className="min-h-[60px] text-xs"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={cancelEditing}>
-                            Cancel
-                          </Button>
-                          <Button size="sm" onClick={saveEditedNote}>
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <Card className="overflow-hidden">
-                        <CardContent className="p-3">
-                          <p className="text-xs">{note}</p>
-                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => startEditingNote(index, note)}
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="history" className="p-4 space-y-4 m-0">
             <h3 className="text-sm font-medium">Session History</h3>
 
-            {displayHistory.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No history available</p>
-            ) : (
-              <div className="space-y-3">
-                {displayHistory.map((item, index) => (
-                  <div key={index} className="text-xs p-2 border-l-2 border-muted pl-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{item.action}</span>
-                      <span className="text-muted-foreground">{item.time}</span>
-                    </div>
-                    <p className="text-muted-foreground mt-1">{item.description}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* ... history tab ... */}
           </TabsContent>
         </ScrollArea>
       </Tabs>

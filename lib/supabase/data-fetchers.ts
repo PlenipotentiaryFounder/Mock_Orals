@@ -939,3 +939,32 @@ export const saveElementEvaluation = async (
   console.log("Saved evaluation for element:", elementId, "in session:", sessionId, data);
   return { success: true };
 };
+
+// Fetch session notes
+export const getSessionNotes = async (sessionId: string): Promise<string | null> => {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("notes")
+    .eq("id", sessionId)
+    .single();
+  if (error) {
+    console.error("Error fetching session notes:", error);
+    return null;
+  }
+  return data?.notes || null;
+};
+
+// Update session notes
+export const updateSessionNotes = async (sessionId: string, notes: string): Promise<boolean> => {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update({ notes })
+    .eq("id", sessionId);
+  if (error) {
+    console.error("Error updating session notes:", error);
+    return false;
+  }
+  return true;
+};
