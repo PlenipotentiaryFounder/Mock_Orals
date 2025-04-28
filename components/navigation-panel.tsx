@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { AreaWithTasksAndElements, TaskWithElements, ElementBasic } from "@/lib/supabase/data-fetchers"
 
 /**
  * NavigationPanel - Provides structured access to all evaluation elements
@@ -31,67 +32,18 @@ import { Badge } from "@/components/ui/badge"
  * through the evaluation template and track progress at a glance.
  */
 interface NavigationPanelProps {
-  templateId: string
+  hierarchy: AreaWithTasksAndElements[]
+  isLoading: boolean
   onElementSelect: (elementId: string) => void
   initialSelectedElementId?: string | null
 }
 
-// Dummy function, replace with actual implementation
-async function getFullHierarchy(templateId: string): Promise<any[]> {
-  // Replace this with your actual data fetching logic
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const mockData = [
-        {
-          id: "area1",
-          order_number: 1,
-          title: "Area 1",
-          tasks: [
-            {
-              id: "task1",
-              order_letter: "A",
-              title: "Task 1",
-              elements: [
-                { id: "element1", code: "EL1", description: "Element 1", status: "completed" },
-                { id: "element2", code: "EL2", description: "Element 2", status: "in-progress" },
-              ],
-            },
-            {
-              id: "task2",
-              order_letter: "B",
-              title: "Task 2",
-              elements: [
-                { id: "element3", code: "EL3", description: "Element 3", status: "issue" },
-                { id: "element4", code: "EL4", description: "Element 4", status: "completed" },
-              ],
-            },
-          ],
-        },
-        {
-          id: "area2",
-          order_number: 2,
-          title: "Area 2",
-          tasks: [
-            {
-              id: "task3",
-              order_letter: "A",
-              title: "Task 3",
-              elements: [
-                { id: "element5", code: "EL5", description: "Element 5", status: "completed" },
-                { id: "element6", code: "EL6", description: "Element 6", status: "in-progress" },
-              ],
-            },
-          ],
-        },
-      ]
-      resolve(mockData)
-    }, 500)
-  })
-}
-
-export function NavigationPanel({ templateId, onElementSelect, initialSelectedElementId }: NavigationPanelProps) {
-  const [hierarchy, setHierarchy] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+export function NavigationPanel({ 
+  hierarchy,
+  isLoading,
+  onElementSelect, 
+  initialSelectedElementId 
+}: NavigationPanelProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedElementId, setSelectedElementId] = useState<string | null>(initialSelectedElementId || null)
   const [view, setView] = useState<"tree" | "progress">("tree")
@@ -102,37 +54,15 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
     notStarted: true,
   })
 
-  // Load hierarchy data
-  useEffect(() => {
-    const loadHierarchy = async () => {
-      setLoading(true)
-      try {
-        const data = await getFullHierarchy(templateId)
-        setHierarchy(data)
-      } catch (error) {
-        console.error("Error loading hierarchy:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (templateId) {
-      loadHierarchy()
-    }
-  }, [templateId])
-
-  // Update selected element when prop changes
   useEffect(() => {
     setSelectedElementId(initialSelectedElementId || null)
   }, [initialSelectedElementId])
 
-  // Handle element selection
   const handleElementClick = (elementId: string) => {
     setSelectedElementId(elementId)
     onElementSelect(elementId)
   }
 
-  // Filter hierarchy based on search term and status filters
   const filteredHierarchy = useMemo(() => {
     if (!searchTerm && Object.values(statusFilters).every((v) => v === true)) {
       return hierarchy
@@ -142,24 +72,22 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
 
     return hierarchy
       .map((area) => {
-        const filteredTasks = area.tasks
+        const filteredTasks = (area.tasks || [])
           .map((task) => {
-            const filteredElements = task.elements.filter((element) => {
-              // Filter by search term
-              const matchesSearch =
-                !searchTerm ||
-                element.code.toLowerCase().includes(lowerSearchTerm) ||
-                element.description.toLowerCase().includes(lowerSearchTerm)
+            const filteredElements = (task.elements || [])
+              .filter((element: ElementBasic) => {
+                const matchesSearch =
+                  !searchTerm ||
+                  element.code.toLowerCase().includes(lowerSearchTerm) ||
+                  element.description.toLowerCase().includes(lowerSearchTerm)
 
-              // Filter by status
-              const matchesStatus =
-                (element.status === "completed" && statusFilters.completed) ||
-                (element.status === "in-progress" && statusFilters["in-progress"]) ||
-                (element.status === "issue" && statusFilters.issue) ||
-                (!element.status && statusFilters.notStarted)
+                const matchesStatus =
+                  (element.status === "completed" && statusFilters.completed) ||
+                  (element.status === "in-progress" && (statusFilters["in-progress"] || statusFilters.notStarted)) ||
+                  (element.status === "issue" && statusFilters.issue)
 
-              return matchesSearch && matchesStatus
-            })
+                return matchesSearch && matchesStatus
+              })
 
             const taskMatches =
               !searchTerm ||
@@ -171,7 +99,7 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
             }
             return null
           })
-          .filter((task) => task !== null)
+          .filter((task): task is TaskWithElements => task !== null)
 
         const areaMatches = !searchTerm || area.title.toLowerCase().includes(lowerSearchTerm)
 
@@ -180,17 +108,18 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
         }
         return null
       })
-      .filter((area) => area !== null)
+      .filter((area): area is AreaWithTasksAndElements => area !== null)
   }, [hierarchy, searchTerm, statusFilters])
 
-  // Determine which accordion items should be open by default
   const defaultAccordionValues = useMemo(() => {
     if (searchTerm) {
       const openItems: string[] = []
       filteredHierarchy.forEach((area) => {
         openItems.push(`area-${area.id}`)
         area.tasks.forEach((task) => {
-          openItems.push(`task-${task.id}`)
+          if (task.elements.length > 0 || task.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+            openItems.push(`task-${task.id}`)
+          }
         })
       })
       return openItems
@@ -200,7 +129,17 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
       for (const area of hierarchy) {
         for (const task of area.tasks) {
           if (task.elements.some((el) => el.id === selectedElementId)) {
-            return [`area-${area.id}`, `task-${task.id}`]
+            const filteredAreaExists = filteredHierarchy.some(fa => fa.id === area.id)
+            const filteredTaskExists = filteredAreaExists && filteredHierarchy
+                .find(fa => fa.id === area.id)?.tasks
+                .some(ft => ft.id === task.id)
+
+            if (filteredTaskExists) {
+              return [`area-${area.id}`, `task-${task.id}`]
+            } else {
+              if (filteredAreaExists) return [`area-${area.id}`]
+              return []
+            }
           }
         }
       }
@@ -209,15 +148,14 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
     return []
   }, [filteredHierarchy, hierarchy, searchTerm, selectedElementId])
 
-  // Calculate progress for each area and task
   const progressData = useMemo(() => {
     return hierarchy.map((area) => {
       let areaCompleted = 0
       let areaTotal = 0
 
-      const tasks = area.tasks.map((task) => {
-        const taskCompleted = task.elements.filter((el) => el.status === "completed").length
-        const taskTotal = task.elements.length
+      const tasks = (area.tasks || []).map((task) => {
+        const taskCompleted = (task.elements || []).filter((el: ElementBasic) => el.status === "completed").length
+        const taskTotal = (task.elements || []).length
 
         areaCompleted += taskCompleted
         areaTotal += taskTotal
@@ -240,8 +178,7 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
     })
   }, [hierarchy])
 
-  // Get element status icon
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: ElementBasic['status']) => {
     switch (status) {
       case "completed":
         return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
@@ -254,30 +191,17 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
     }
   }
 
-  // Calculate overall progress
-  const overallProgress = useMemo(() => {
-    const totalElements = hierarchy.reduce(
-      (acc, area) => acc + area.tasks.reduce((taskAcc, task) => taskAcc + task.elements.length, 0),
-      0,
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     )
-
-    const completedElements = hierarchy.reduce(
-      (acc, area) =>
-        acc +
-        area.tasks.reduce(
-          (taskAcc, task) => taskAcc + task.elements.filter((el) => el.status === "completed").length,
-          0,
-        ),
-      0,
-    )
-
-    return totalElements > 0 ? Math.round((completedElements / totalElements) * 100) : 0
-  }, [hierarchy])
+  }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col border bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="p-3 border-b">
-        {/* Search input with icon */}
         <div className="relative mb-2">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -288,7 +212,6 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
           />
         </div>
 
-        {/* Filter dropdown */}
         <div className="flex items-center justify-between mb-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -329,16 +252,14 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Overall progress indicator */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Progress:</span>
             <Badge variant="outline" className="h-5 text-[10px]">
-              {overallProgress}%
+              {Math.round(progressData.reduce((acc, area) => acc + area.progress, 0) / progressData.length)}%
             </Badge>
           </div>
         </div>
 
-        {/* View switcher tabs */}
         <Tabs value={view} onValueChange={(v) => setView(v as "tree" | "progress")} className="w-full">
           <TabsList className="w-full h-7">
             <TabsTrigger value="tree" className="flex-1 text-xs">
@@ -351,11 +272,7 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
 
           <TabsContent value="tree" className="p-0 m-0">
             <ScrollArea className="h-[calc(100vh-10rem)]">
-              {loading ? (
-                <div className="flex items-center justify-center h-40">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : filteredHierarchy.length === 0 ? (
+              {filteredHierarchy.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   {searchTerm ? "No matching results found." : "No areas found for this template."}
                 </div>
@@ -367,14 +284,13 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
                   defaultValue={defaultAccordionValues}
                 >
                   {filteredHierarchy.map((area) => (
-                    <AccordionItem value={`area-${area.id}`} key={area.id} className="border-b-0">
+                    <AccordionItem key={area.id} value={`area-${area.id}`} className="border-b-0">
                       <AccordionTrigger className="px-3 py-2 text-sm hover:bg-muted/50 hover:no-underline">
                         <div className="flex items-center gap-2 font-medium">
                           <Layers className="h-4 w-4 text-primary" />
                           <span>
                             {area.order_number}. {area.title}
                           </span>
-                          {/* Show area progress badge */}
                           <Badge variant="outline" className="ml-auto text-[10px] h-5">
                             {progressData.find((a) => a.id === area.id)?.completed || 0}/
                             {progressData.find((a) => a.id === area.id)?.total || 0}
@@ -385,7 +301,7 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
                         {area.tasks.length > 0 ? (
                           <Accordion type="multiple" className="w-full" defaultValue={defaultAccordionValues}>
                             {area.tasks.map((task) => (
-                              <AccordionItem value={`task-${task.id}`} key={task.id} className="border-b-0">
+                              <AccordionItem key={task.id} value={`task-${task.id}`} className="border-b-0">
                                 <AccordionTrigger className="pl-4 pr-3 py-1.5 text-xs hover:bg-muted/50 hover:no-underline [&[data-state=open]>div>svg]:rotate-90">
                                   <div className="flex items-center gap-2 justify-between w-full">
                                     <div className="flex items-center gap-2">
@@ -394,7 +310,6 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
                                         {task.order_letter}. {task.title}
                                       </span>
                                     </div>
-                                    {/* Show task progress badge */}
                                     <Badge variant="outline" className="text-[10px] h-5">
                                       {task.elements.filter((el) => el.status === "completed").length}/
                                       {task.elements.length}
@@ -472,7 +387,6 @@ export function NavigationPanel({ templateId, onElementSelect, initialSelectedEl
                           </div>
                           <Progress value={task.progress} className="h-1" />
 
-                          {/* Task elements with clickable buttons */}
                           <div className="grid grid-cols-2 gap-1 mt-1">
                             {task.elements.map((element) => (
                               <Button

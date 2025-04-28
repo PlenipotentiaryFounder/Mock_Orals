@@ -30,6 +30,11 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useHotkeys } from "react-hotkeys-hook"
 import { Input } from "@/components/ui/input"
+import { 
+    fetchElementDetails,
+    saveElementEvaluation,
+    ElementFullData
+} from "@/lib/supabase/data-fetchers"
 
 /**
  * ElementDetailView - The primary workspace for evaluating individual elements
@@ -51,9 +56,10 @@ interface ElementDetailViewProps {
 }
 
 export function ElementDetailView({ elementId, sessionId }: ElementDetailViewProps) {
-  const [element, setElement] = useState<any>(null)
+  const [element, setElement] = useState<ElementFullData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
   const [performance, setPerformance] = useState<"satisfactory" | "unsatisfactory" | "not-observed">("not-observed")
   const [activeTab, setActiveTab] = useState("evaluation")
@@ -70,146 +76,74 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
   useHotkeys("alt+s", () => setPerformance("satisfactory"), [])
   useHotkeys("alt+u", () => setPerformance("unsatisfactory"), [])
   useHotkeys("alt+n", () => setPerformance("not-observed"), [])
-  useHotkeys("alt+left", () => console.log("Navigate to previous element"))
-  useHotkeys("alt+right", () => console.log("Navigate to next element"))
-
-  // Sample instructor notes (regulatory references)
-  const instructorNotes = [
-    {
-      text: "The applicant must be able to read, speak, write, and understand the English language.",
-      source: "14 CFR § 61.123(b)",
-      link: "#",
-    },
-    {
-      text: "To be eligible for a commercial pilot certificate, an applicant must be at least 18 years of age.",
-      source: "14 CFR § 61.123(a)",
-      link: "#",
-    },
-    {
-      text: "The applicant must receive and log ground training from an authorized instructor, or complete a home-study course, covering the aeronautical knowledge areas of § 61.125.",
-      source: "14 CFR § 61.125",
-      link: "#",
-    },
-    {
-      text: "The applicant must receive and log flight training in the areas of operation listed in § 61.127 that apply to the aircraft category and class.",
-      source: "14 CFR § 61.127",
-      link: "#",
-    },
-    {
-      text: "The applicant must receive endorsements in their logbook from an instructor certifying completion of training and readiness for the practical test.",
-      source: "14 CFR § 61.123(c,d)",
-      link: "#",
-    },
-    {
-      text: "The applicant must hold at least a private pilot certificate before applying for a commercial certificate.",
-      source: "14 CFR § 61.123(g)",
-      link: "#",
-    },
-    {
-      text: "The applicant must log at least 250 hours of flight time as a pilot, including specific PIC, solo, cross-country, and training requirements.",
-      source: "14 CFR § 61.129(a)",
-      link: "#",
-    },
-    {
-      text: "A Second-Class Medical Certificate is required to exercise the privileges of a commercial pilot certificate.",
-      source: "14 CFR § 61.23(a)(2)",
-      link: "#",
-    },
-    {
-      text: "The applicant must pass a knowledge test and a practical test covering areas of operation from § 61.127.",
-      source: "14 CFR § 61.123(e,f)",
-      link: "#",
-    },
-  ]
-
-  // Sample questions
-  const sampleQuestions = [
-    "Walk me through everything you'd need to legally qualify for a Commercial Pilot Certificate under Part 61.",
-    "Can you explain the difference between receiving training under Part 61 vs. Part 141, and how that affects certification?",
-    "What are the medical certificate requirements for a commercial pilot, and how long is each class valid?",
-    "Describe the aeronautical experience requirements for a commercial pilot certificate in an airplane single-engine land.",
-    "What endorsements are required before you can take the commercial pilot practical test?",
-    "Explain the difference between the privileges of a private pilot and a commercial pilot.",
-    "What are the recency of experience requirements to carry passengers as a commercial pilot?",
-    "How would you determine if you're eligible to apply for a commercial pilot certificate?",
-  ]
-
-  // Mock function to fetch element details
-  const fetchElementDetails = async (elementId: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800))
-
-    // Mock data
-    return {
-      id: elementId,
-      code: "CPL.1.2",
-      description: "Commercial Pilot Eligibility Requirements",
-      details:
-        "The applicant should demonstrate knowledge of the eligibility requirements for a commercial pilot certificate, including age, language, medical, and experience requirements.",
-      performance_criteria: [
-        "Correctly states the age requirement",
-        "Explains language proficiency requirements",
-        "Describes medical certificate requirements",
-        "Details aeronautical experience requirements",
-        "Explains knowledge and practical test requirements",
-      ],
-      common_errors: [
-        "Confusion between Part 61 and Part 141 requirements",
-        "Incomplete knowledge of required flight experience",
-        "Misunderstanding of medical certificate requirements",
-        "Unfamiliarity with endorsement requirements",
-      ],
-      references: ["14 CFR § 61.123", "14 CFR § 61.125", "14 CFR § 61.127", "14 CFR § 61.129"],
-      status: "in-progress",
-      notes: "",
-      performance: "not-observed",
-    }
-  }
-
-  // Mock function to save element evaluation
-  const saveElementEvaluation = async () => {
-    setSaving(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Update local state
-    setElement((prev) => ({
-      ...prev,
-      notes,
-      performance,
-      status: performance === "not-observed" ? "in-progress" : performance === "satisfactory" ? "completed" : "issue",
-    }))
-
-    setSaving(false)
-
-    // Return success
-    return true
-  }
+  // Navigation hotkeys need implementation context (e.g., parent component callback)
+  // useHotkeys("alt+left", () => console.log("Navigate to previous element"))
+  // useHotkeys("alt+right", () => console.log("Navigate to next element"))
 
   useEffect(() => {
     const loadElementDetails = async () => {
-      setLoading(true)
+      if (!elementId || !sessionId) return; // Ensure IDs are present
+      setLoading(true);
+      setSaveError(null); // Clear previous errors on load
       try {
-        const data = await fetchElementDetails(elementId)
-        setElement(data)
-        setNotes(data.notes || "")
-        setPerformance(data.performance || "not-observed")
+        // Use the REAL fetcher function
+        const data = await fetchElementDetails(elementId, sessionId);
+        setElement(data);
+        if (data) {
+            // Set initial state from fetched data, using defaults if necessary
+            setNotes(data.performanceData?.comment || "");
+            setPerformance(data.performanceData?.performance_status || "not-observed");
+        } else {
+            // Handle case where element details couldn't be fetched
+            setElement(null);
+            setNotes("");
+            setPerformance("not-observed");
+            console.error("Element data not found or failed to load.");
+            // Maybe set an error state to show to the user
+        }
       } catch (error) {
-        console.error("Error loading element details:", error)
+        console.error("Error loading element details:", error);
+        setElement(null); // Clear potentially stale data on error
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    if (elementId) {
-      loadElementDetails()
-    }
-  }, [elementId])
+    loadElementDetails();
+  }, [elementId, sessionId]); // Re-run effect if elementId or sessionId changes
 
   const handleSave = async () => {
-    await saveElementEvaluation()
-  }
+    if (!element) return; // Don't save if element data isn't loaded
+    setSaving(true);
+    setSaveError(null); // Clear previous save error
+
+    // Use the REAL saver function
+    const result = await saveElementEvaluation(
+        sessionId,
+        elementId,
+        performance,
+        notes
+    );
+
+    setSaving(false);
+
+    if (result.success) {
+        console.log("Evaluation saved successfully.");
+        // Optionally, update the local element state if the save function doesn't return the updated record
+        // Or re-fetch, although that might be too slow
+        setElement(prev => prev ? ({ 
+            ...prev, 
+            performanceData: { 
+                ...(prev.performanceData || {}), // Keep potential other fields
+                performance_status: performance, 
+                comment: notes 
+            }
+        }) : null);
+    } else {
+        console.error("Failed to save evaluation:", result.error);
+        setSaveError("Failed to save evaluation. Please try again.");
+    }
+  };
 
   const handleAddQuickNote = () => {
     if (newQuickNote.trim()) {
@@ -233,324 +167,283 @@ export function ElementDetailView({ elementId, sessionId }: ElementDetailViewPro
   }
 
   const getStatusBadge = () => {
-    switch (element?.status) {
-      case "completed":
-        return (
-          <Badge variant="success" className="ml-2">
-            Completed
-          </Badge>
-        )
-      case "issue":
-        return (
-          <Badge variant="destructive" className="ml-2">
-            Issue
-          </Badge>
-        )
-      case "in-progress":
-        return (
-          <Badge variant="secondary" className="ml-2">
-            In Progress
-          </Badge>
-        )
+    // Use performance state which reflects user selection until saved
+    // Or could use element.performanceData?.performance_status for saved status
+    const currentPerformance = performance; // Reflects UI state
+
+    switch (currentPerformance) {
+      case "satisfactory":
+        return <Badge variant="success" className="ml-2">Satisfactory</Badge>;
+      case "unsatisfactory":
+        return <Badge variant="destructive" className="ml-2">Unsatisfactory</Badge>;
+      case "not-observed":
+        return <Badge variant="outline" className="ml-2">Not Observed</Badge>;
       default:
-        return (
-          <Badge variant="outline" className="ml-2">
-            Not Started
-          </Badge>
-        )
+        return null;
     }
-  }
+  };
 
   if (loading) {
     return (
-      <Card className="w-full h-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </Card>
-    )
+        <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+    );
   }
 
   if (!element) {
     return (
-      <Card className="w-full h-full flex flex-col items-center justify-center p-6">
-        <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium">Element Not Found</h3>
-        <p className="text-sm text-muted-foreground mt-1">The requested element could not be found.</p>
-      </Card>
-    )
+        <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-card border rounded-lg shadow-sm">
+            <h3 className="text-lg font-medium text-muted-foreground">Element Not Found</h3>
+            <p className="text-sm text-muted-foreground mt-1">The details for this element could not be loaded.</p>
+        </div>
+    );
   }
 
+  // Main Render Logic using fetched `element` state
   return (
-    <Card className="w-full h-full flex flex-col">
-      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
-        <div>
-          <div className="flex items-center">
-            <CardTitle className="text-base">
-              {element.code}: {element.description}
-            </CardTitle>
-            {getStatusBadge()}
+    <Card className="h-full flex flex-col overflow-hidden shadow-md">
+      {/* Header */} 
+      <CardHeader className="border-b p-4">
+        <div className="flex justify-between items-start">
+          <div>
+             {/* Use data from element state */}
+            <h2 className="text-base font-semibold leading-none tracking-tight flex items-center">
+                {element.code}
+                {getStatusBadge()} 
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">{element.description}</p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Session ID: {sessionId}</p>
-        </div>
-
-        {/* Navigation buttons */}
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" title="Previous Element (Alt+←)">
-            <ArrowLeft className="h-4 w-4" />
+           {/* Save Button */}
+           <Button 
+             onClick={handleSave} 
+             disabled={saving || loading}
+             size="sm"
+             className="ml-4 flex-shrink-0"
+           >
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Save
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" title="Next Element (Alt+→)">
-            <ArrowRight className="h-4 w-4" />
-          </Button>
         </div>
+         {/* Show save error message */}
+         {saveError && (
+            <p className="text-xs text-red-600 mt-2">{saveError}</p>
+         )}
       </CardHeader>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="w-full h-9 mb-2 mx-6">
-          <TabsTrigger value="evaluation" className="flex-1">
-            Evaluation
-          </TabsTrigger>
-          <TabsTrigger value="instructorNotes" className="flex-1">
-            <BookOpen className="h-3.5 w-3.5 mr-1.5" />
-            Instructor Notes
-          </TabsTrigger>
-          <TabsTrigger value="questions" className="flex-1">
-            <HelpCircle className="h-3.5 w-3.5 mr-1.5" />
-            Questions
-          </TabsTrigger>
-        </TabsList>
+      {/* Content */} 
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Side: Tabs (Evaluation, Instructor Notes, Questions) */}
+        <div className="flex-1 flex flex-col border-r overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+             {/* Tab Triggers */}
+             <div className="px-4 pt-3 border-b">
+               <TabsList className="grid w-full grid-cols-3 h-9">
+                 <TabsTrigger value="evaluation" className="text-xs h-8">
+                   <Clipboard className="mr-1.5 h-4 w-4" /> Evaluation
+                 </TabsTrigger>
+                 <TabsTrigger value="notes" className="text-xs h-8">
+                    <BookOpen className="mr-1.5 h-4 w-4" /> Instructor Notes
+                 </TabsTrigger>
+                 <TabsTrigger value="questions" className="text-xs h-8">
+                    <HelpCircle className="mr-1.5 h-4 w-4" /> Questions
+                 </TabsTrigger>
+               </TabsList>
+             </div>
 
-        <ScrollArea className="flex-1">
-          <TabsContent value="evaluation" className="p-6 space-y-4 m-0">
-            <div className="space-y-4">
-              {/* Performance Assessment with keyboard shortcuts */}
-              <div>
-                <h3 className="text-sm font-medium mb-2">Performance Assessment</h3>
-                <RadioGroup
-                  value={performance}
-                  onValueChange={(value) => setPerformance(value as any)}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      value="satisfactory"
-                      id="satisfactory"
-                      className="text-green-500 border-green-500 focus:ring-green-500"
-                    />
-                    <Label htmlFor="satisfactory" className="flex items-center">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 mr-1.5" />
-                      Satisfactory
-                      <kbd className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-muted rounded">Alt+S</kbd>
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      value="unsatisfactory"
-                      id="unsatisfactory"
-                      className="text-red-500 border-red-500 focus:ring-red-500"
-                    />
-                    <Label htmlFor="unsatisfactory" className="flex items-center">
-                      <XCircle className="h-4 w-4 text-red-500 mr-1.5" />
-                      Unsatisfactory
-                      <kbd className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-muted rounded">Alt+U</kbd>
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem
-                      value="not-observed"
-                      id="not-observed"
-                      className="text-amber-500 border-amber-500 focus:ring-amber-500"
-                    />
-                    <Label htmlFor="not-observed" className="flex items-center">
-                      <Clock className="h-4 w-4 text-amber-500 mr-1.5" />
-                      Not Observed
-                      <kbd className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-muted rounded">Alt+N</kbd>
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {/* Notes section with quick notes */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium">Notes</h3>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => navigator.clipboard.writeText(notes)}
-                      title="Copy notes to clipboard"
-                    >
-                      <Clipboard className="h-3.5 w-3.5" />
-                      Copy
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => setNotes("")}
-                      title="Clear notes"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-                <Textarea
-                  placeholder="Enter evaluation notes here..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[120px] mb-2"
-                />
-
-                {/* Quick Notes Section */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-xs font-medium text-muted-foreground">Quick Notes</h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => setShowQuickNoteInput(!showQuickNoteInput)}
-                    >
-                      <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                      Add Template
-                    </Button>
-                  </div>
-
-                  {showQuickNoteInput && (
-                    <div className="flex gap-2 mb-2">
-                      <Input
-                        value={newQuickNote}
-                        onChange={(e) => setNewQuickNote(e.target.value)}
-                        placeholder="Enter a new quick note template..."
-                        className="text-xs h-8"
-                      />
-                      <Button size="sm" className="h-8" onClick={handleAddQuickNote}>
-                        Add
-                      </Button>
+            <ScrollArea className="flex-1">
+              {/* Evaluation Tab Content */}
+              <TabsContent value="evaluation" className="p-4 space-y-4 m-0">
+                  {/* Performance Criteria - Use data from element state */}
+                  {element.performance_criteria && element.performance_criteria.length > 0 && (
+                    <div>
+                      <Label className="text-xs font-medium">Performance Criteria</Label>
+                      <ul className="mt-1 list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                        {element.performance_criteria.map((criterion, index) => (
+                          <li key={index}>{criterion}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {quickNotes.map((note, index) => (
-                      <div key={index} className="group relative">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start text-xs h-auto py-1.5 pr-8 text-left"
-                          onClick={() => handleInsertQuickNote(note)}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
-                          <span className="truncate">{note}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleRemoveQuickNote(index)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
+                  {/* Performance Assessment Radio Group */}
+                  <div>
+                     <Label className="text-sm font-medium">Performance Assessment</Label>
+                     <RadioGroup 
+                       value={performance}
+                       onValueChange={(value) => setPerformance(value as any)}
+                       className="mt-2 grid grid-cols-3 gap-4"
+                     >
+                       {/* ... Radio items for Satisfactory, Unsatisfactory, Not Observed ... */}
+                       {/* ... (Example for Satisfactory) ... */}
+                       <div>
+                        <RadioGroupItem value="satisfactory" id="perf-sat" className="peer sr-only" />
+                        <Label htmlFor="perf-sat" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-green-600 [&:has([data-state=checked])]:border-green-600 cursor-pointer">
+                           <CheckCircle2 className="mb-2 h-5 w-5 text-green-600" />
+                           <span className="text-xs font-medium">Satisfactory</span>
+                           <span className="text-[10px] text-muted-foreground">(Alt+S)</span>
+                        </Label>
+                       </div>
+                       {/* ... (Similar for Unsatisfactory with XCircle/Red) ... */}
+                       <div>
+                        <RadioGroupItem value="unsatisfactory" id="perf-unsat" className="peer sr-only" />
+                        <Label htmlFor="perf-unsat" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-red-600 [&:has([data-state=checked])]:border-red-600 cursor-pointer">
+                          <XCircle className="mb-2 h-5 w-5 text-red-600" />
+                          <span className="text-xs font-medium">Unsatisfactory</span>
+                          <span className="text-[10px] text-muted-foreground">(Alt+U)</span>
+                        </Label>
+                       </div>
+                       {/* ... (Similar for Not Observed with Clock/Muted) ... */}
+                       <div>
+                        <RadioGroupItem value="not-observed" id="perf-notobs" className="peer sr-only" />
+                        <Label htmlFor="perf-notobs" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                          <Clock className="mb-2 h-5 w-5 text-muted-foreground" />
+                          <span className="text-xs font-medium">Not Observed</span>
+                          <span className="text-[10px] text-muted-foreground">(Alt+N)</span>
+                        </Label>
+                       </div>
+                     </RadioGroup>
                   </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="instructorNotes" className="p-6 space-y-6 m-0">
-            <div>
-              <h3 className="text-sm font-medium mb-4">Regulatory References</h3>
-              <div className="space-y-4">
-                {instructorNotes.map((note, index) => (
-                  <div key={index} className="border-l-2 border-primary/20 pl-4 py-1">
-                    <p className="text-sm mb-1">{note.text}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {note.source}
-                      </Badge>
-                      <a
-                        href={note.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary flex items-center hover:underline"
-                      >
-                        Link <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
+                  {/* Notes Textarea */}
+                  <div>
+                     <Label htmlFor="notes" className="text-sm font-medium">Evaluation Notes</Label>
+                     <Textarea 
+                        id="notes"
+                        placeholder="Enter evaluation notes here..."
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="mt-1 min-h-[150px] text-sm"
+                     />
+                  </div>
+
+                  {/* Common Errors - Use data from element state */}
+                  {element.common_errors && element.common_errors.length > 0 && (
+                    <div>
+                      <Label className="text-xs font-medium">Common Errors / Points of Failure</Label>
+                      <ul className="mt-1 list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                         {element.common_errors.map((error, index) => (
+                           <li key={index}>{error}</li>
+                         ))}
+                       </ul>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">Performance Criteria</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                {element.performance_criteria.map((criterion, index) => (
-                  <li key={index} className="text-sm">
-                    {criterion}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h3 className="text-sm font-medium mb-2">Common Errors</h3>
-              <ul className="list-disc pl-5 space-y-1">
-                {element.common_errors.map((error, index) => (
-                  <li key={index} className="text-sm">
-                    {error}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="questions" className="p-6 m-0">
-            <div>
-              <h3 className="text-sm font-medium mb-4">Sample Questions</h3>
-              <div className="space-y-3">
-                {sampleQuestions.map((question, index) => (
-                  <div key={index} className="border rounded-md p-3 bg-muted/20">
-                    <div className="flex items-start gap-3">
-                      <HelpCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      <p className="text-sm">{question}</p>
+                  )}
+                  
+                  {/* References - Use data from element state */}
+                  {element.references && element.references.length > 0 && (
+                    <div>
+                        <Label className="text-xs font-medium">References</Label>
+                        <div className="mt-1 space-x-1">
+                            {element.references.map((ref, index) => (
+                                <Badge key={index} variant="secondary">{ref}</Badge>
+                            ))}
+                        </div>
                     </div>
-                  </div>
+                  )}
+
+              </TabsContent>
+
+              {/* Instructor Notes Tab Content - Use data from element state */}
+              <TabsContent value="notes" className="p-4 m-0">
+                 <h3 className="text-sm font-semibold mb-3">Instructor Notes & References</h3>
+                 {element.instructorNotes && element.instructorNotes.length > 0 ? (
+                    <div className="space-y-3">
+                        {element.instructorNotes.map((note) => (
+                           <Card key={note.id} className="bg-muted/50">
+                               <CardContent className="p-3 text-sm">
+                                   <p>{note.note_text}</p>
+                                   {(note.source_title || note.source_url) && (
+                                       <div className="mt-2 text-xs text-muted-foreground flex items-center">
+                                           <span>Source:</span>
+                                           {note.source_url ? (
+                                               <a href={note.source_url} target="_blank" rel="noopener noreferrer" className="ml-1 text-primary hover:underline flex items-center">
+                                                   {note.source_title || note.source_url}
+                                                   <ExternalLink className="ml-1 h-3 w-3" />
+                                               </a>
+                                           ) : (
+                                               <span className="ml-1">{note.source_title}</span>
+                                           )}
+                                           {note.page_reference && <span className="ml-2">(Page: {note.page_reference})</span>}
+                                       </div>
+                                   )}
+                               </CardContent>
+                           </Card>
+                        ))}
+                    </div>
+                 ) : (
+                    <p className="text-sm text-muted-foreground">No instructor notes available for this element.</p>
+                 )}
+              </TabsContent>
+
+              {/* Questions Tab Content - Use data from element state */}
+               <TabsContent value="questions" className="p-4 m-0">
+                  <h3 className="text-sm font-semibold mb-3">Sample Questions</h3>
+                  {element.sampleQuestions && element.sampleQuestions.length > 0 ? (
+                    <ul className="space-y-2 list-decimal list-inside">
+                        {element.sampleQuestions.map((q) => (
+                           <li key={q.id} className="text-sm text-muted-foreground">{q.question_text}</li>
+                        ))}
+                    </ul>
+                  ) : (
+                     <p className="text-sm text-muted-foreground">No sample questions available for this element.</p>
+                  )}
+               </TabsContent>
+
+            </ScrollArea>
+          </div>
+        </div>
+
+        {/* Right Side: Quick Notes Panel */}
+        <aside className="w-64 flex-shrink-0 flex flex-col border-l bg-muted/30 overflow-hidden p-4 space-y-4">
+           <h3 className="text-sm font-semibold">Quick Notes</h3>
+           <ScrollArea className="flex-1 -mr-4 pr-3">
+              <div className="space-y-2">
+                {quickNotes.map((note, index) => (
+                   <Card key={index} className="relative group bg-card text-xs shadow-sm">
+                      <CardContent className="p-2 flex justify-between items-center">
+                         <p className="flex-1 mr-2 break-words">{note}</p>
+                         <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleInsertQuickNote(note)} title="Insert Note">
+                               <MessageSquare className="h-3.5 w-3.5" />
+                             </Button>
+                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleRemoveQuickNote(index)} title="Remove Quick Note">
+                                <Trash2 className="h-3.5 w-3.5" />
+                             </Button>
+                         </div>
+                      </CardContent>
+                   </Card>
                 ))}
               </div>
-            </div>
-          </TabsContent>
-        </ScrollArea>
-      </Tabs>
-
-      <CardFooter className="border-t p-4 flex justify-between">
-        <Button variant="outline" size="sm" className="gap-1">
-          <RotateCcw className="h-4 w-4" />
-          Reset
-        </Button>
-
-        <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1">
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              Save Evaluation
-            </>
-          )}
-        </Button>
-      </CardFooter>
+           </ScrollArea>
+           {/* Add new quick note section */} 
+           <div>
+                {showQuickNoteInput ? (
+                    <div className="space-y-2">
+                        <Textarea 
+                           placeholder="Enter new quick note..."
+                           value={newQuickNote}
+                           onChange={(e) => setNewQuickNote(e.target.value)}
+                           className="text-xs min-h-[60px]"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setShowQuickNoteInput(false)}>Cancel</Button>
+                            <Button size="sm" onClick={handleAddQuickNote} disabled={!newQuickNote.trim()}>Add</Button>
+                        </div>
+                    </div>
+                ) : (
+                    <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setShowQuickNoteInput(true)}>
+                       <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add New Quick Note
+                    </Button>
+                )}
+           </div>
+        </aside>
+      </div>
+      
+      {/* Removed CardFooter */}
     </Card>
   )
 }

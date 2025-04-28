@@ -1,20 +1,20 @@
 import { createClient } from "./client"
 
 // Type definitions for better type safety
-type TemplateData = {
+export type TemplateData = {
   id: string
   name: string
   description: string | null
 }
 
-type AreaData = {
+export type AreaData = {
   id: string
   order_number: number
   title: string
   description: string | null
 }
 
-type TaskData = {
+export type TaskData = {
   id: string
   area_id: string
   order_letter: string
@@ -23,7 +23,7 @@ type TaskData = {
   is_required: boolean
 }
 
-type ElementData = {
+export type ElementData = {
   id: string
   task_id: string
   code: string
@@ -32,7 +32,7 @@ type ElementData = {
   description: string
 }
 
-type InstructorNoteData = {
+export type InstructorNoteData = {
   id: string
   element_id: string
   note_text: string
@@ -41,13 +41,13 @@ type InstructorNoteData = {
   page_reference: string | null
 }
 
-type SampleQuestionData = {
+export type SampleQuestionData = {
   id: string
   element_id: string
   question_text: string
 }
 
-type SessionData = {
+export type SessionData = {
   id: string
   user_id: string
   template_id: string
@@ -59,7 +59,7 @@ type SessionData = {
 }
 
 // Add StudentData type definition
-type StudentData = {
+export type StudentData = {
   id: string // Assuming UUID primary key for student
   user_id: string // Foreign key referencing auth.users.id
   full_name: string
@@ -68,7 +68,7 @@ type StudentData = {
 }
 
 // Add ScenarioData type definition
-type ScenarioData = {
+export type ScenarioData = {
   id: string;
   template_id: string;
   title: string;
@@ -82,7 +82,13 @@ type ScenarioData = {
 };
 
 // Type for the nested structure
-export type ElementBasic = { id: string; code: string; description: string; type: string };
+export type ElementBasic = { 
+  id: string; 
+  code: string; 
+  description: string; 
+  type: string;
+  status: 'completed' | 'in-progress' | 'issue'; // Add status field
+};
 export type TaskWithElements = TaskData & { elements: ElementBasic[] };
 export type AreaWithTasksAndElements = AreaData & { tasks: TaskWithElements[] };
 
@@ -675,137 +681,258 @@ export const getStudentsByUserId = async (userId: string): Promise<StudentData[]
 }
 
 // Fetch full Area -> Task -> Element hierarchy for a template
-export const getFullHierarchy = async (templateId: string): Promise<AreaWithTasksAndElements[]> => {
-  if (!templateId) return [];
-  const supabase = createClient();
+export const getFullHierarchy = async (
+  templateId: string,
+  sessionId: string // Add sessionId argument
+): Promise<AreaWithTasksAndElements[]> => {
+  const supabase = createClient()
 
-  // 1. Fetch all Areas for the template
-  const { data: areas, error: areasError } = await supabase
-    .from('areas')
-    .select('*')
-    .eq('template_id', templateId)
-    .order('order_number');
+  // 1. Fetch all areas for the template
+  const { data: areasData, error: areasError } = await supabase
+    .from("areas")
+    .select("*")
+    .eq("template_id", templateId)
+    .order("order_number")
 
-  if (areasError || !areas) {
-    console.error("Error fetching areas for hierarchy:", areasError);
-    return [];
+  if (areasError) {
+    console.error("Error fetching areas:", areasError)
+    return []
+  }
+  if (!areasData) {
+    return []
   }
 
-  const areaIds = areas.map(a => a.id);
-  if (areaIds.length === 0) return [];
+  const areaIds = areasData.map((area) => area.id)
 
-  // 2. Fetch all Tasks for these Areas
-  const { data: tasks, error: tasksError } = await supabase
-    .from('tasks')
-    .select('*')
-    .in('area_id', areaIds)
-    .order('order_letter');
+  // 2. Fetch all tasks for these areas
+  const { data: tasksData, error: tasksError } = await supabase
+    .from("tasks")
+    .select("*")
+    .in("area_id", areaIds)
+    .order("order_letter")
 
-  if (tasksError || !tasks) {
-    console.error("Error fetching tasks for hierarchy:", tasksError);
-    // Return areas without tasks if tasks fail
-    return areas.map(a => ({ ...a, tasks: [] })); 
+  if (tasksError) {
+    console.error("Error fetching tasks:", tasksError)
+    return []
+  }
+  if (!tasksData) {
+    // If there are no tasks, return areas with empty tasks arrays
+    return areasData.map(area => ({ ...area, tasks: [] }));
   }
 
-  const taskIds = tasks.map(t => t.id);
-  let elements: ElementBasic[] = [];
-  if (taskIds.length > 0) {
-      // 3. Fetch all Elements for these Tasks
-      const { data: fetchedElements, error: elementsError } = await supabase
-        .from('elements')
-        .select('id, task_id, code, description, type')
-        .in('task_id', taskIds)
-        .order('code');
-        
-      if (elementsError) {
-          console.error("Error fetching elements for hierarchy:", elementsError);
-          // Proceed without elements if fetch fails
-      } else {
-          elements = fetchedElements || [];
-      }
+
+  const taskIds = tasksData.map((task) => task.id)
+
+  // 3. Fetch all elements for these tasks AND their session status
+  const { data: elementsData, error: elementsError } = await supabase
+    .from("elements")
+    .select(`
+      *,
+      session_elements (
+        performance_status
+      )
+    `)
+    .in("task_id", taskIds)
+    .eq("session_elements.session_id", sessionId) // Filter session_elements by sessionId
+    .order("code")
+  
+  if (elementsError) {
+    console.error("Error fetching elements with session status:", elementsError)
+    // Decide how to handle partial errors, maybe return hierarchy with empty elements?
+    return [] 
+  }
+  if (!elementsData) {
+    // If there are no elements, return areas and tasks with empty elements arrays
+     const tasksByArea = tasksData.reduce((acc, task) => {
+        if (!acc[task.area_id]) acc[task.area_id] = [];
+        acc[task.area_id].push({ ...task, elements: [] });
+        return acc;
+    }, {} as Record<string, TaskWithElements[]>);
+
+    return areasData.map(area => ({
+        ...area,
+        tasks: tasksByArea[area.id] || [],
+    }));
   }
 
-  // 4. Assemble the nested structure
-  const tasksById = new Map<string, TaskData>(tasks.map(t => [t.id, t]));
-  const elementsByTaskId = new Map<string, ElementBasic[]>();
-  elements.forEach(el => {
-      const list = elementsByTaskId.get(el.task_id) || [];
-      list.push(el);
-      elementsByTaskId.set(el.task_id, list);
+
+  // 4. Map session_elements data to element status
+  const elementsWithStatus = elementsData.map((element) => {
+    const sessionElement = element.session_elements && Array.isArray(element.session_elements) 
+                           ? element.session_elements[0] // Get the first (should be only) entry for this session
+                           : element.session_elements; // Handle if Supabase returns object directly (less common now)
+
+    let status: 'completed' | 'in-progress' | 'issue' = 'in-progress'; // Default status
+
+    if (sessionElement?.performance_status) {
+        switch (sessionElement.performance_status) {
+            case 'satisfactory':
+                status = 'completed';
+                break;
+            case 'unsatisfactory':
+                status = 'issue';
+                break;
+            case 'not-observed':
+                // Falls through to default 'in-progress' which is correct
+                break; 
+        }
+    }
+    
+    // We only need basic element info + status for the hierarchy view
+    return {
+        id: element.id,
+        code: element.code,
+        description: element.description,
+        type: element.type,
+        task_id: element.task_id, // Keep task_id for grouping
+        status: status,
+    } as ElementBasic & { task_id: string }; // Include task_id temporarily
   });
 
-  const hierarchy: AreaWithTasksAndElements[] = areas.map(area => ({
-    ...area,
-    tasks: tasks
-      .filter(task => task.area_id === area.id)
-      .map(task => ({
-        ...task,
-        elements: elementsByTaskId.get(task.id) || []
-      }))
-  }));
 
-  return hierarchy;
-};
+  // 5. Group elements by task
+  const elementsByTask = elementsWithStatus.reduce((acc, element) => {
+    if (!acc[element.task_id]) {
+      acc[element.task_id] = []
+    }
+    // Remove temporary task_id before pushing
+    const { task_id, ...elementBasic } = element; 
+    acc[element.task_id].push(elementBasic);
+    return acc
+  }, {} as Record<string, ElementBasic[]>)
+
+  // 6. Group tasks by area and add elements
+  const tasksByArea = tasksData.reduce((acc, task) => {
+    if (!acc[task.area_id]) {
+      acc[task.area_id] = []
+    }
+    acc[task.area_id].push({
+      ...task,
+      elements: elementsByTask[task.id] || [],
+    })
+    return acc
+  }, {} as Record<string, TaskWithElements[]>)
+
+  // 7. Combine areas with their tasks
+  const finalHierarchy = areasData.map((area) => ({
+    ...area,
+    tasks: tasksByArea[area.id] || [],
+  }))
+
+  return finalHierarchy
+}
 
 // Fetch detailed data for a single element within a session context
-export const getElementDetails = async (
-    elementId: string,
-    sessionId: string
+export const fetchElementDetails = async (
+  elementId: string,
+  sessionId: string,
 ): Promise<ElementFullData | null> => {
-    if (!elementId || !sessionId) return null;
-    const supabase = createClient();
+  if (!elementId || !sessionId) return null;
 
-    // 1. Fetch Element base data
-    const { data: elementData, error: elementError } = await supabase
-        .from('elements')
-        .select('*')
-        .eq('id', elementId)
-        .single();
+  const supabase = createClient();
 
-    if (elementError || !elementData) {
-        console.error("Error fetching element details:", elementError);
-        return null;
-    }
+  // 1. Fetch base element data
+  const { data: elementData, error: elementError } = await supabase
+    .from('elements')
+    .select('*')
+    .eq('id', elementId)
+    .single();
 
-    // 2. Fetch associated data (notes, questions, score)
-    try {
-        const [notesResult, questionsResult, scoreResult] = await Promise.all([
-            supabase.from('instructor_notes').select('*').eq('element_id', elementId).order('created_at'),
-            supabase.from('sample_questions').select('*').eq('element_id', elementId).order('created_at'),
-            supabase.from('session_elements')
-                .select('score, instructor_comment, instructor_mentioned, student_mentioned')
-                .eq('session_id', sessionId)
-                .eq('element_id', elementId)
-                .maybeSingle() // Use maybeSingle as score might not exist
-        ]);
+  if (elementError || !elementData) {
+    console.error(`Error fetching element ${elementId}:`, elementError);
+    return null;
+  }
 
-        if (notesResult.error) console.error("Error fetching instructor notes:", notesResult.error);
-        if (questionsResult.error) console.error("Error fetching sample questions:", questionsResult.error);
-        if (scoreResult.error) console.error("Error fetching element score data:", scoreResult.error);
+  // 2. Fetch associated instructor notes
+  const { data: instructorNotes, error: notesError } = await supabase
+    .from('instructor_notes')
+    .select('*')
+    .eq('element_id', elementId)
+    .order('order_number');
 
-        // Construct the full data object
-        const fullData: ElementFullData = {
-            ...elementData,
-            instructorNotes: notesResult.data || [],
-            sampleQuestions: questionsResult.data || [],
-            scoreData: scoreResult.data ? {
-                score: scoreResult.data.score, // Can be null from DB
-                comment: scoreResult.data.instructor_comment || "",
-                instructor_mentioned: scoreResult.data.instructor_mentioned || false,
-                student_mentioned: scoreResult.data.student_mentioned || false
-            } : null // Set to null if no score record found
-        };
+  if (notesError) {
+    console.warn(`Error fetching instructor notes for element ${elementId}:`, notesError);
+    // Continue even if notes fail
+  }
 
-        return fullData;
+  // 3. Fetch associated sample questions
+  const { data: sampleQuestions, error: questionsError } = await supabase
+    .from('sample_questions')
+    .select('*')
+    .eq('element_id', elementId)
+    .order('order_number');
+  
+  if (questionsError) {
+    console.warn(`Error fetching sample questions for element ${elementId}:`, questionsError);
+    // Continue even if questions fail
+  }
 
-    } catch (error) {
-        console.error("Error fetching associated element data:", error);
-        // Return element data even if associated data fails
-        return { 
-            ...elementData, 
-            instructorNotes: [], 
-            sampleQuestions: [], 
-            scoreData: null 
-        };
-    }
+  // 4. Fetch session-specific performance data for this element
+  const { data: sessionElementData, error: sessionElementError } = await supabase
+    .from('session_elements')
+    .select('performance_status, instructor_comment') // Fetch the relevant fields
+    .eq('session_id', sessionId)
+    .eq('element_id', elementId)
+    .maybeSingle(); // Use maybeSingle as the record might not exist yet
+  
+  if (sessionElementError) {
+    console.error(`Error fetching session element data for element ${elementId} in session ${sessionId}:`, sessionElementError);
+    // Decide if this error is critical. For now, let's return null if we can't get session data.
+    return null; 
+  }
+
+  // 5. Combine the data
+  const combinedData: ElementFullData = {
+    ...elementData,
+    // Ensure arrays are not null even if fetch failed or returned null
+    instructorNotes: instructorNotes || [], 
+    sampleQuestions: sampleQuestions || [],
+    // Map session data to the expected structure
+    performanceData: sessionElementData ? {
+      performance_status: sessionElementData.performance_status as ('satisfactory' | 'unsatisfactory' | 'not-observed'),
+      comment: sessionElementData.instructor_comment || ''
+    } : null,
+  };
+
+  return combinedData;
+};
+
+// Saves the performance evaluation for a specific element in a session
+export const saveElementEvaluation = async (
+  sessionId: string,
+  elementId: string,
+  performance: 'satisfactory' | 'unsatisfactory' | 'not-observed',
+  notes: string
+): Promise<{ success: boolean; error?: any }> => {
+  if (!sessionId || !elementId || !performance) {
+    console.error("Missing required arguments for saveElementEvaluation");
+    return { success: false, error: "Missing required arguments." };
+  }
+
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('session_elements')
+    .upsert(
+      {
+        session_id: sessionId,
+        element_id: elementId,
+        performance_status: performance,
+        instructor_comment: notes,
+        // Optionally set needs_review based on performance
+        needs_review: performance === 'unsatisfactory',
+      },
+      {
+        onConflict: 'session_id, element_id', // Specify columns for conflict detection
+      }
+    )
+    .select(); // Select to confirm the operation
+
+  if (error) {
+    console.error("Error saving element evaluation:", error);
+    return { success: false, error };
+  }
+
+  console.log("Saved evaluation for element:", elementId, "in session:", sessionId, data);
+  return { success: true };
 };
