@@ -81,6 +81,23 @@ type ScenarioData = {
   created_at: string | null;
 };
 
+// Type for the nested structure
+export type ElementBasic = { id: string; code: string; description: string; type: string };
+export type TaskWithElements = TaskData & { elements: ElementBasic[] };
+export type AreaWithTasksAndElements = AreaData & { tasks: TaskWithElements[] };
+
+// Type for combined element details
+export type ElementFullData = ElementData & {
+    instructorNotes: InstructorNoteData[];
+    sampleQuestions: SampleQuestionData[];
+    scoreData: { 
+        score: number | null; // Allow null for score
+        comment: string; 
+        instructor_mentioned: boolean; 
+        student_mentioned: boolean; 
+    } | null; // Score data might not exist yet
+};
+
 // Cache for frequently accessed data
 const cache = {
   templates: new Map<string, TemplateData>(),
@@ -656,3 +673,139 @@ export const getStudentsByUserId = async (userId: string): Promise<StudentData[]
 
   return data || []
 }
+
+// Fetch full Area -> Task -> Element hierarchy for a template
+export const getFullHierarchy = async (templateId: string): Promise<AreaWithTasksAndElements[]> => {
+  if (!templateId) return [];
+  const supabase = createClient();
+
+  // 1. Fetch all Areas for the template
+  const { data: areas, error: areasError } = await supabase
+    .from('areas')
+    .select('*')
+    .eq('template_id', templateId)
+    .order('order_number');
+
+  if (areasError || !areas) {
+    console.error("Error fetching areas for hierarchy:", areasError);
+    return [];
+  }
+
+  const areaIds = areas.map(a => a.id);
+  if (areaIds.length === 0) return [];
+
+  // 2. Fetch all Tasks for these Areas
+  const { data: tasks, error: tasksError } = await supabase
+    .from('tasks')
+    .select('*')
+    .in('area_id', areaIds)
+    .order('order_letter');
+
+  if (tasksError || !tasks) {
+    console.error("Error fetching tasks for hierarchy:", tasksError);
+    // Return areas without tasks if tasks fail
+    return areas.map(a => ({ ...a, tasks: [] })); 
+  }
+
+  const taskIds = tasks.map(t => t.id);
+  let elements: ElementBasic[] = [];
+  if (taskIds.length > 0) {
+      // 3. Fetch all Elements for these Tasks
+      const { data: fetchedElements, error: elementsError } = await supabase
+        .from('elements')
+        .select('id, task_id, code, description, type')
+        .in('task_id', taskIds)
+        .order('code');
+        
+      if (elementsError) {
+          console.error("Error fetching elements for hierarchy:", elementsError);
+          // Proceed without elements if fetch fails
+      } else {
+          elements = fetchedElements || [];
+      }
+  }
+
+  // 4. Assemble the nested structure
+  const tasksById = new Map<string, TaskData>(tasks.map(t => [t.id, t]));
+  const elementsByTaskId = new Map<string, ElementBasic[]>();
+  elements.forEach(el => {
+      const list = elementsByTaskId.get(el.task_id) || [];
+      list.push(el);
+      elementsByTaskId.set(el.task_id, list);
+  });
+
+  const hierarchy: AreaWithTasksAndElements[] = areas.map(area => ({
+    ...area,
+    tasks: tasks
+      .filter(task => task.area_id === area.id)
+      .map(task => ({
+        ...task,
+        elements: elementsByTaskId.get(task.id) || []
+      }))
+  }));
+
+  return hierarchy;
+};
+
+// Fetch detailed data for a single element within a session context
+export const getElementDetails = async (
+    elementId: string,
+    sessionId: string
+): Promise<ElementFullData | null> => {
+    if (!elementId || !sessionId) return null;
+    const supabase = createClient();
+
+    // 1. Fetch Element base data
+    const { data: elementData, error: elementError } = await supabase
+        .from('elements')
+        .select('*')
+        .eq('id', elementId)
+        .single();
+
+    if (elementError || !elementData) {
+        console.error("Error fetching element details:", elementError);
+        return null;
+    }
+
+    // 2. Fetch associated data (notes, questions, score)
+    try {
+        const [notesResult, questionsResult, scoreResult] = await Promise.all([
+            supabase.from('instructor_notes').select('*').eq('element_id', elementId).order('created_at'),
+            supabase.from('sample_questions').select('*').eq('element_id', elementId).order('created_at'),
+            supabase.from('session_elements')
+                .select('score, instructor_comment, instructor_mentioned, student_mentioned')
+                .eq('session_id', sessionId)
+                .eq('element_id', elementId)
+                .maybeSingle() // Use maybeSingle as score might not exist
+        ]);
+
+        if (notesResult.error) console.error("Error fetching instructor notes:", notesResult.error);
+        if (questionsResult.error) console.error("Error fetching sample questions:", questionsResult.error);
+        if (scoreResult.error) console.error("Error fetching element score data:", scoreResult.error);
+
+        // Construct the full data object
+        const fullData: ElementFullData = {
+            ...elementData,
+            instructorNotes: notesResult.data || [],
+            sampleQuestions: questionsResult.data || [],
+            scoreData: scoreResult.data ? {
+                score: scoreResult.data.score, // Can be null from DB
+                comment: scoreResult.data.instructor_comment || "",
+                instructor_mentioned: scoreResult.data.instructor_mentioned || false,
+                student_mentioned: scoreResult.data.student_mentioned || false
+            } : null // Set to null if no score record found
+        };
+
+        return fullData;
+
+    } catch (error) {
+        console.error("Error fetching associated element data:", error);
+        // Return element data even if associated data fails
+        return { 
+            ...elementData, 
+            instructorNotes: [], 
+            sampleQuestions: [], 
+            scoreData: null 
+        };
+    }
+};
