@@ -45,4 +45,82 @@ export const getStudentsByUserIdFallback = async (userId: string): Promise<Stude
     console.error("Error in getStudentsByUserIdFallback:", error)
     return []
   }
+}
+
+// Fetch scenarios linked to a specific template
+export async function getScenariosForTemplate(templateId: string) {
+  if (!templateId) {
+    console.log("getScenariosForTemplate called without a templateId");
+    return []; // Return empty if no templateId is provided
+  }
+
+  // Use the client component helper to create a Supabase client instance
+  // IMPORTANT: This assumes data-fetchers are intended to be called from client components.
+  // If they need to be called from server-side, you'd use createServerClient here.
+  const supabase = createClient(); 
+
+  const { data, error } = await supabase
+    .from('scenarios')
+    .select('*') // Select all scenario columns, adjust if needed
+    .eq('template_id', templateId)
+    .order('title'); // Optional: Order scenarios by title
+
+  if (error) {
+    console.error('Error fetching scenarios for template:', error);
+    // Depending on requirements, you might throw the error or return empty
+    // throw new Error(`Failed to fetch scenarios: ${error.message}`);
+    return []; 
+  }
+
+  return data || [];
+} 
+
+// Function to fetch all templates
+export async function getTemplates() {
+  // Use client Supabase instance, assuming called from client component
+  const supabase = createClient(); 
+  const { data, error } = await supabase
+    .from('templates')
+    .select('id, name') // Select only needed fields
+    .order('name'); // Order by name
+
+  if (error) {
+    console.error("Error fetching templates:", error);
+    // Handle error appropriately
+    return [];
+  }
+  return data || [];
+}
+
+// Type for the session payload
+// Ensure this matches the structure expected by your 'sessions' table
+type SessionPayload = {
+  session_name: string;
+  template_id: string;
+  student_id: string; // Expecting user_id of the student
+  instructor_id: string; // Expecting user_id of the instructor
+  scenario_id: string | null;
+  notes: string | null;
+  // Add other fields with appropriate types if needed
+};
+
+// Function to create a new session
+export async function createNewSession(payload: SessionPayload) {
+  // Use client Supabase instance, assuming called from client component
+  const supabase = createClient(); 
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .insert(payload)
+    .select()
+    .single(); // Assuming you want the created session back
+
+  if (error) {
+    console.error('Error creating session:', error);
+    // Rethrow or handle as needed, returning null indicates failure here
+    // throw new Error(`Failed to create session: ${error.message}`);
+    return null;
+  }
+
+  return data;
 } 

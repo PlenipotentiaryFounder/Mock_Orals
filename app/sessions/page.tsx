@@ -121,10 +121,14 @@ export default async function SessionsPage() {
         session_name, 
         date_started, 
         date_completed,
-        students!inner(id, full_name),
-        templates!inner(id, name)
+        student_id,  // Fetch the student_id (FK)
+        student:students!inner(user_id, full_name), // Fetch student name via relationship, ensuring user_id is selectable
+        template:templates!inner(id, name) // Use alias for template too
       `)
-      .eq('user_id', userId) // user_id in sessions table is the instructor who created it
+      // We need to filter where the session.student_id matches a students.user_id
+      // The select using !inner implicitly handles the join based on FKs
+      // Let's refine the select to be more explicit if needed, but start simple
+      .eq('instructor_id', userId) // Filter by instructor_id 
       .order('date_started', { ascending: false })
   } else {
     // For students, get all sessions where they are the student
@@ -135,9 +139,9 @@ export default async function SessionsPage() {
         session_name, 
         date_started, 
         date_completed,
-        user_id,
-        instructor:users!inner(email, raw_user_meta_data->full_name),
-        templates!inner(id, name)
+        instructor_id, // Fetch instructor_id (FK)
+        instructor:users!inner(email, raw_user_meta_data),
+        template:templates!inner(id, name) // Use alias for template
       `)
       .eq('student_id', userId) // student_id in sessions links to the student's user_id
       .order('date_started', { ascending: false })
@@ -156,9 +160,10 @@ export default async function SessionsPage() {
     session_name: session.session_name,
     date_started: session.date_started,
     date_completed: session.date_completed,
-    student_name: userRole === 'instructor' ? session.students.full_name : null,
-    instructor_name: userRole === 'student' ? (session.instructor.raw_user_meta_data?.full_name || session.instructor.email) : null,
-    template_name: session.templates.name
+    // Adjust access based on aliases used in select
+    student_name: userRole === 'instructor' ? session.student?.full_name : null, 
+    instructor_name: userRole === 'student' ? (session.instructor?.raw_user_meta_data?.full_name || session.instructor?.email) : null,
+    template_name: session.template?.name 
   }))
   
   return (

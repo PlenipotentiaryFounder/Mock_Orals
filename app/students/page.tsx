@@ -52,7 +52,7 @@ export default async function StudentsPage() {
   
   // Fetch students specifically for this instructor
   const students = await getStudentsForInstructor(instructorId)
-  
+
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between">

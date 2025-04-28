@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,17 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, AlertCircle, UserPlus } from "lucide-react"
+import { Loader2, AlertCircle, UserPlus, ArrowRight } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { createNewSession, getTemplates, getScenarios } from "@/lib/supabase/data-fetchers"
+import { getTemplates } from "@/lib/supabase/data-fetchers-fix"
 import type { User } from "@supabase/supabase-js"
 
 // Assuming StudentData type is defined elsewhere or define it here if needed
-// We might need to adjust this based on the actual structure from getStudentsForInstructor
 type StudentData = {
-  id: string
-  user_id: string // Student's own user_id from auth.users
-  instructor_id?: string | null // FK to instructor
+  id: string // Primary key of the students table itself
+  user_id: string // Student's own user_id from auth.users (FK)
+  instructor_id?: string | null // FK to instructor auth.users id
   full_name: string
   email: string | null
   phone?: string | null
@@ -33,24 +32,19 @@ type StudentData = {
 
 type Template = { id: string; name: string }
 
-type Scenario = { id: string; name: string }
-
 export default function NewSessionPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true) // Start loading initially
   const [formError, setFormError] = useState<string | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
-  const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [students, setStudents] = useState<StudentData[]>([])
   const [user, setUser] = useState<User | null>(null)
   const [showAddStudentForm, setShowAddStudentForm] = useState(false)
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("")
+  const [selectedStudentUserId, setSelectedStudentUserId] = useState<string>("")
 
   const [formData, setFormData] = useState({
-    sessionName: "",
     templateId: "",
-    scenarioId: "",
     notes: "",
   })
 
@@ -58,7 +52,6 @@ export default function NewSessionPage() {
     full_name: "",
     email: "",
     phone: "",
-    // Need instructor_id here when creating a new student
   })
 
   // Combined useEffect for auth check and data fetching
@@ -80,23 +73,27 @@ export default function NewSessionPage() {
       setUser(session.user) // Set the user state
       const instructorId = session.user.id
 
-      // 2. Fetch Initial Data (Templates, Scenarios, Instructor's Students)
+      // 2. Fetch Initial Data (Templates, Instructor's Students) - Removed Scenarios
       try {
-        const [temps, scenes, instructorStudents] = await Promise.all([
-          getTemplates(),
-          getScenarios(),
+        const [temps, instructorStudents] = await Promise.all([
+          getTemplates(), 
           // Fetch students directly linked to this instructor
           supabase.from('students').select('*').eq('instructor_id', instructorId).order('full_name')
         ])
 
         setTemplates(temps || [])
-        setScenarios(scenes || [])
-        
+
         if (instructorStudents.error) {
           console.error("Error fetching instructor students:", instructorStudents.error)
           throw new Error(instructorStudents.error.message || "Failed to fetch students for instructor")
         }
-        setStudents(instructorStudents.data || [])
+        // Ensure students data includes user_id
+        const validStudents = instructorStudents.data?.filter(s => s.user_id) || [];
+        if (validStudents.length !== instructorStudents.data?.length) {
+            console.warn("Some fetched students are missing a user_id and will be excluded.");
+            // Optionally notify the user if this is unexpected
+        }
+        setStudents(validStudents)
 
       } catch (error: any) {
         console.error("Error fetching initial data:", error)
@@ -125,9 +122,9 @@ export default function NewSessionPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleStudentSelectChange = (id: string) => {
-    setSelectedStudentId(id)
-    if (id) {
+  const handleStudentSelectChange = (userId: string) => {
+    setSelectedStudentUserId(userId)
+    if (userId) {
       setShowAddStudentForm(false)
       setNewStudentData({ full_name: "", email: "", phone: "" })
     }
@@ -137,19 +134,28 @@ export default function NewSessionPage() {
     const addingNew = !showAddStudentForm
     setShowAddStudentForm(addingNew)
     if (addingNew) {
-      setSelectedStudentId("")
+      setSelectedStudentUserId("")
     } else {
       setNewStudentData({ full_name: "", email: "", phone: "" })
     }
   }
+  
+  // Memoize selected student and template objects to avoid re-finding them on every render
+  const selectedStudent = useMemo(() => {
+    return students.find(s => s.user_id === selectedStudentUserId);
+  }, [students, selectedStudentUserId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const selectedTemplate = useMemo(() => {
+    return templates.find(t => t.id === formData.templateId);
+  }, [templates, formData.templateId]);
+
+  const handleProceedToScenario = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setFormError(null)
-    let studentIdForSession = selectedStudentId
-    const supabase = createClient(); // Use client for mutation
-    const currentInstructorId = user?.id; // Get instructor ID from state
+    let studentUserIdForSession = selectedStudentUserId;
+    const supabase = createClient();
+    const currentInstructorId = user?.id;
 
     if (!currentInstructorId) {
       setFormError("Instructor ID not found. Please refresh and try again.");
@@ -158,19 +164,15 @@ export default function NewSessionPage() {
     }
 
     try {
-      // Handle adding a new student if the form is shown
       if (showAddStudentForm) {
         if (!newStudentData.full_name || !newStudentData.email) {
           throw new Error("Please provide the new student's full name and email.");
         }
-        
+
         const studentToInsert = {
           ...newStudentData,
-          instructor_id: currentInstructorId, // Assign current instructor
-          // Potentially create a dummy auth user for the student here if needed,
-          // similar to the dev mode logic, or handle that separately.
-          // For now, just creating the profile record.
-          user_id: crypto.randomUUID() // Assign a temporary UUID if student doesn't have own account yet
+          instructor_id: currentInstructorId,
+          user_id: crypto.randomUUID()
         }
 
         const { data: createdStudent, error: createStudentError } = await supabase
@@ -180,60 +182,54 @@ export default function NewSessionPage() {
           .single();
 
         if (createStudentError || !createdStudent) {
-            throw new Error(createStudentError?.message || "Failed to create new student.");
+          console.error("Create student error:", createStudentError);
+          throw new Error(createStudentError?.message || "Failed to create new student.");
         }
-        
-        studentIdForSession = createdStudent.id; // Use the ID of the newly created student
-        setStudents(prev => [...prev, createdStudent]); // Add to dropdown list
-        setSelectedStudentId(studentIdForSession); // Select the new student
-        setShowAddStudentForm(false); // Hide the add form
-        setNewStudentData({ full_name: "", email: "", phone: "" }); // Reset form
+
+        studentUserIdForSession = createdStudent.user_id;
+        setStudents(prev => [...prev, createdStudent]);
+        setSelectedStudentUserId(studentUserIdForSession);
+        setShowAddStudentForm(false);
+        setNewStudentData({ full_name: "", email: "", phone: "" });
       }
       
-      // Ensure a student is selected or was just created
-      if (!studentIdForSession) {
+      if (!studentUserIdForSession) {
         throw new Error("Please select an existing student or add a new one.");
       }
 
-      // Ensure other required fields are present
-      if (!formData.sessionName || !formData.templateId) {
-        throw new Error("Missing required fields: Session Name or Template.");
+      if (!formData.templateId) {
+        throw new Error("Please select an ACS Template.");
+      }
+      
+      const finalSelectedStudent = students.find(s => s.user_id === studentUserIdForSession);
+      const finalSelectedTemplate = templates.find(t => t.id === formData.templateId);
+
+      if (!finalSelectedStudent || !finalSelectedTemplate) {
+           throw new Error("Selected student or template not found. Please try again.");
       }
 
-      // Prepare payload for creating the session
-      const sessionPayload = {
-        session_name: formData.sessionName,
-        user_id: currentInstructorId, // This is the instructor creating the session
-        instructor_id: currentInstructorId, // Redundant? Check if sessions table needs this
-        template_id: formData.templateId,
-        scenario_id: formData.scenarioId === "none" ? null : formData.scenarioId || null,
-        notes: formData.notes,
-        student_id: studentIdForSession, // The ID of the student participating
-      }
+      const sessionName = `${finalSelectedTemplate.name} ACS | ${finalSelectedStudent.full_name}`;
 
-      console.log("Creating session with payload:", sessionPayload);
+      const params = new URLSearchParams({
+        templateId: formData.templateId,
+        studentId: studentUserIdForSession,
+        sessionName: sessionName,
+        notes: formData.notes || "",
+      });
 
-      // Call function to create the session (adjust based on actual implementation)
-      // Assuming createNewSession handles the DB insert for 'sessions' table
-      const newSession = await createNewSession(sessionPayload);
-      if (!newSession) {
-        throw new Error("Failed to save session data. Check server logs or createNewSession function.");
-      }
+      console.log("Proceeding to scenario selection with params:", params.toString());
 
-      toast({ title: "Success", description: "Session created successfully" });
-      router.push(`/sessions/${newSession.id}`); // Navigate to the new session page
+      router.push(`/sessions/new/select-scenario?${params.toString()}`);
 
     } catch (error: any) {
-      console.error("Submit Error:", error);
+      console.error("Proceed Error:", error);
       const errorMsg = error.message || "An unexpected error occurred.";
       setFormError(errorMsg);
       toast({ title: "Error", description: errorMsg, variant: "destructive" });
-    } finally {
       setLoading(false);
     }
   }
 
-  // Render Loading state
   if (loading && !templates.length && !students.length) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -246,8 +242,8 @@ export default function NewSessionPage() {
     <div className="container mx-auto py-10">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>Create New Mock Oral Session</CardTitle>
-          <CardDescription>Set up a new mock oral exam session for a student</CardDescription>
+          <CardTitle>Create New Mock Oral Session: Step 1</CardTitle>
+          <CardDescription>Select the template and student for the session.</CardDescription>
         </CardHeader>
 
         {formError && (
@@ -260,82 +256,47 @@ export default function NewSessionPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleProceedToScenario}>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="sessionName">Session Name *</Label>
-              <Input
-                  id="sessionName"
-                  name="sessionName"
-                  placeholder="e.g., CPL Oral Prep - J. Doe"
-                  value={formData.sessionName}
-                  onChange={handleChange}
+              <Label htmlFor="templateId">ACS Template *</Label>
+              <Select
+                  onValueChange={(value) => handleSelectChange("templateId", value)}
+                  value={formData.templateId}
                   required
-                  disabled={loading}
-              />
+                  disabled={loading || templates.length === 0}
+                  name="templateId"
+              >
+                  <SelectTrigger>
+                    <SelectValue placeholder={templates.length === 0 ? "Loading Templates..." : "Select ACS Template"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+              </Select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="templateId">ACS Template *</Label>
-                <Select
-                    onValueChange={(value) => handleSelectChange("templateId", value)}
-                    value={formData.templateId}
-                    required
-                    disabled={loading || templates.length === 0}
-                >
-                    <SelectTrigger>
-                      <SelectValue placeholder={templates.length === 0 ? "Loading..." : "Select ACS Template"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="scenarioId">Scenario (Optional)</Label>
-                 <Select
-                    onValueChange={(value) => handleSelectChange("scenarioId", value)}
-                    value={formData.scenarioId}
-                    disabled={loading || scenarios.length === 0}
-                >
-                    <SelectTrigger>
-                      <SelectValue placeholder={scenarios.length === 0 ? "Loading..." : "Select Scenario"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {scenarios.map((scenario) => (
-                        <SelectItem key={scenario.id} value={scenario.id}>
-                            {scenario.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            {/* Student Selection Section */}
             <div className="space-y-2 rounded-md border p-4">
               <Label>Student *</Label>
               {!showAddStudentForm ? (
                 <div className="flex items-center gap-2">
                   <Select
                     onValueChange={handleStudentSelectChange}
-                    value={selectedStudentId}
+                    value={selectedStudentUserId}
                     required={!showAddStudentForm}
                     disabled={loading || students.length === 0}
                   >
                     <SelectTrigger className="flex-grow">
-                      <SelectValue placeholder={students.length === 0 ? "No students found" : "Select Existing Student"} />
+                      <SelectValue placeholder={students.length === 0 ? "Loading Students..." : "Select Existing Student"} />
                     </SelectTrigger>
                     <SelectContent>
                       {students.map((student: StudentData) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.full_name} ({student.email})
+                        <SelectItem key={student.user_id} value={student.user_id}>
+                          {student.full_name} {student.email ? `(${student.email})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -356,7 +317,7 @@ export default function NewSessionPage() {
                         value={newStudentData.full_name}
                         onChange={handleNewStudentChange}
                         placeholder="Student Full Name"
-                        required
+                        required={showAddStudentForm}
                         disabled={loading}
                       />
                     </div>
@@ -369,7 +330,7 @@ export default function NewSessionPage() {
                         value={newStudentData.email}
                         onChange={handleNewStudentChange}
                         placeholder="student@example.com"
-                        required
+                        required={showAddStudentForm}
                         disabled={loading}
                       />
                     </div>
@@ -380,7 +341,7 @@ export default function NewSessionPage() {
                         id="newStudentPhone"
                         name="phone"
                         type="tel"
-                        value={newStudentData.phone}
+                        value={newStudentData.phone || ""}
                         onChange={handleNewStudentChange}
                         placeholder="(123) 456-7890"
                         disabled={loading}
@@ -411,10 +372,12 @@ export default function NewSessionPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Session...
+                  Processing...
                 </>
               ) : (
-                "Create Session"
+                <>
+                  Next: Select Scenario <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               )}
             </Button>
           </CardFooter>
