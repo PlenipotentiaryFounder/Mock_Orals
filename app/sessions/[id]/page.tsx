@@ -54,6 +54,7 @@ function SessionPageContent() {
     const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
     const [progressValue, setProgressValue] = useState(0); // Keep placeholder progress state
     const [error, setError] = useState<string | null>(null); // State for error messages
+    const [view, setView] = useState<"standard" | "focus" | "timeline">("standard");
 
     // Progress calculation from hierarchy
     const progressMetrics = useMemo(() => {
@@ -198,21 +199,24 @@ function SessionPageContent() {
             title={session.session_name || "Session"}
             progress={progressMetrics.percentage}
             navigationPanel={
-                <NavigationPanel 
+                view !== "focus" && (
+                  <NavigationPanel 
                     hierarchy={hierarchy}
                     isLoading={loadingHierarchy}
                     onElementSelect={handleElementSelect}
                     initialSelectedElementId={selectedElementId}
-                />
+                  />
+                )
             }
             contextPanel={
-                scenario ? (
+                scenario && view !== "focus" ? (
                   <ContextPanel 
                     scenario={scenario} 
                     sessionNotes={sessionNotes}
                     onSaveSessionNotes={handleSaveSessionNotes}
                     sessionHistory={sessionHistory}
                     loadingHistory={loadingHistory}
+                    defaultTab={view === "timeline" ? "history" : undefined}
                   />
                 ) : undefined
             }
@@ -230,7 +234,8 @@ function SessionPageContent() {
                 <CommandBar 
                     session={session} 
                     template={template} 
-                    // TODO: Add view change handling
+                    currentView={view}
+                    onViewChange={(v) => setView(v as "standard" | "focus" | "timeline")}
                 />
             }
         >

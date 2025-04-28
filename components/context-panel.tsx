@@ -38,10 +38,11 @@ interface ContextPanelProps {
   onSaveSessionNotes: (notes: string) => void
   sessionHistory?: any
   loadingHistory?: boolean
+  defaultTab?: string
 }
 
-export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessionHistory, loadingHistory }: ContextPanelProps) {
-  const [activeTab, setActiveTab] = useState("scenario")
+export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessionHistory, loadingHistory, defaultTab }: ContextPanelProps) {
+  const [activeTab, setActiveTab] = useState(defaultTab || "scenario")
   const [notesValue, setNotesValue] = useState(sessionNotes)
   const [saving, setSaving] = useState(false)
 
@@ -49,6 +50,11 @@ export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessi
   useEffect(() => {
     setNotesValue(sessionNotes)
   }, [sessionNotes])
+
+  // Update activeTab if defaultTab changes
+  useEffect(() => {
+    if (defaultTab) setActiveTab(defaultTab)
+  }, [defaultTab])
 
   const handleSave = async () => {
     setSaving(true)
