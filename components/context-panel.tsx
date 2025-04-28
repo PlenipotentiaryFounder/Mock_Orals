@@ -36,9 +36,11 @@ interface ContextPanelProps {
   scenario: any
   sessionNotes: string
   onSaveSessionNotes: (notes: string) => void
+  sessionHistory?: any
+  loadingHistory?: boolean
 }
 
-export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes }: ContextPanelProps) {
+export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessionHistory, loadingHistory }: ContextPanelProps) {
   const [activeTab, setActiveTab] = useState("scenario")
   const [notesValue, setNotesValue] = useState(sessionNotes)
   const [saving, setSaving] = useState(false)
@@ -178,8 +180,55 @@ export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes }: Con
 
           <TabsContent value="history" className="p-4 space-y-4 m-0">
             <h3 className="text-sm font-medium">Session History</h3>
-
-            {/* ... history tab ... */}
+            {loadingHistory ? (
+              <div className="text-xs text-muted-foreground">Loading history...</div>
+            ) : sessionHistory && (
+              <div className="space-y-3">
+                {/* Session lifecycle events */}
+                {sessionHistory.session && (
+                  <div className="text-xs p-2 border-l-2 border-muted pl-2">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Session Created</span>
+                      <span className="text-muted-foreground">{new Date(sessionHistory.session.created_at).toLocaleString()}</span>
+                    </div>
+                    {sessionHistory.session.date_started && (
+                      <div className="flex justify-between">
+                        <span className="font-medium">Session Started</span>
+                        <span className="text-muted-foreground">{new Date(sessionHistory.session.date_started).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {sessionHistory.session.date_completed && (
+                      <div className="flex justify-between">
+                        <span className="font-medium">Session Completed</span>
+                        <span className="text-muted-foreground">{new Date(sessionHistory.session.date_completed).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {sessionHistory.session.updated_at && (
+                      <div className="flex justify-between">
+                        <span className="font-medium">Notes Last Updated</span>
+                        <span className="text-muted-foreground">{new Date(sessionHistory.session.updated_at).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Element evaluations */}
+                {sessionHistory.elementEvaluations && sessionHistory.elementEvaluations.length > 0 ? (
+                  sessionHistory.elementEvaluations.map((ev: any, idx: number) => (
+                    <div key={idx} className="text-xs p-2 border-l-2 border-blue-200 pl-2">
+                      <div className="flex justify-between">
+                        <span className="font-medium">Element Evaluated</span>
+                        <span className="text-muted-foreground">{new Date(ev.updated_at).toLocaleString()}</span>
+                      </div>
+                      <div>Status: <span className="font-mono">{ev.performance_status}</span></div>
+                      {ev.instructor_comment && <div>Comment: <span className="italic">{ev.instructor_comment}</span></div>}
+                      <div>Element ID: <span className="font-mono">{ev.element_id}</span></div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-muted-foreground">No element evaluations yet.</div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </ScrollArea>
       </Tabs>

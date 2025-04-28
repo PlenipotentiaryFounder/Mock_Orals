@@ -968,3 +968,27 @@ export const updateSessionNotes = async (sessionId: string, notes: string): Prom
   }
   return true;
 };
+
+// Fetch session history (lifecycle + element evaluations)
+export const fetchSessionHistory = async (sessionId: string) => {
+  const supabase = createClient();
+  // 1. Get session lifecycle events
+  const { data: sessionData, error: sessionError } = await supabase
+    .from("sessions")
+    .select("created_at, date_started, date_completed, updated_at, notes")
+    .eq("id", sessionId)
+    .single();
+
+  // 2. Get all element evaluations for this session
+  const { data: elementData, error: elementError } = await supabase
+    .from("session_elements")
+    .select("element_id, performance_status, instructor_comment, updated_at")
+    .eq("session_id", sessionId)
+    .order("updated_at", { ascending: false });
+
+  return {
+    session: sessionData || null,
+    elementEvaluations: elementData || [],
+    errors: { sessionError, elementError }
+  };
+};

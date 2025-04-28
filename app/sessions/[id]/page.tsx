@@ -7,6 +7,7 @@ import {
   getFullHierarchy, // Import new fetcher
   getSessionNotes, // Import notes fetcher
   updateSessionNotes, // Import update function
+  fetchSessionHistory, // Import session history fetcher
   SessionData, // Import types
   TemplateData, 
   ScenarioData, 
@@ -44,6 +45,8 @@ function SessionPageContent() {
     const [hierarchy, setHierarchy] = useState<AreaWithTasksAndElements[]>([]);
     const [sessionNotes, setSessionNotes] = useState<string>("");
     const [loadingNotes, setLoadingNotes] = useState(true);
+    const [sessionHistory, setSessionHistory] = useState<any>(null);
+    const [loadingHistory, setLoadingHistory] = useState(true);
     
     // State for UI interactions
     const [loadingInitialData, setLoadingInitialData] = useState(true);
@@ -132,6 +135,15 @@ function SessionPageContent() {
             .finally(() => setLoadingNotes(false));
     }, [sessionId]);
 
+    // Fetch session history
+    useEffect(() => {
+        if (!sessionId) return;
+        setLoadingHistory(true);
+        fetchSessionHistory(sessionId)
+            .then(history => setSessionHistory(history))
+            .finally(() => setLoadingHistory(false));
+    }, [sessionId]);
+
     // Save handler for notes
     const handleSaveSessionNotes = async (notes: string) => {
         const success = await updateSessionNotes(sessionId, notes);
@@ -199,6 +211,8 @@ function SessionPageContent() {
                     scenario={scenario} 
                     sessionNotes={sessionNotes}
                     onSaveSessionNotes={handleSaveSessionNotes}
+                    sessionHistory={sessionHistory}
+                    loadingHistory={loadingHistory}
                   />
                 ) : undefined
             }
