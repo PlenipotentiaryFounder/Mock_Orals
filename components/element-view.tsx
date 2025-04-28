@@ -52,32 +52,33 @@ export function ElementView({ taskId, sessionId, elementType }: ElementViewProps
           setInstructorNotes(data.instructorNotes)
           setSampleQuestions(data.sampleQuestions)
 
-          // Initialize scores and comments
+          // Initialize scores and comments based on fetched elements
           const initialScores: Record<string, number> = {}
           const initialComments: Record<string, string> = {}
           const initialInstructorMentioned: Record<string, boolean> = {}
           const initialStudentMentioned: Record<string, boolean> = {}
+          const initialExpandedState: Record<string, boolean> = {}
 
-          Object.entries(data.scores).forEach(([elementId, scoreData]) => {
-            initialScores[elementId] = scoreData.score
-            initialComments[elementId] = scoreData.comment
-            initialInstructorMentioned[elementId] = scoreData.instructor_mentioned || false
-            initialStudentMentioned[elementId] = scoreData.student_mentioned || false
-          })
+          // Iterate over ALL fetched elements
+          data.elements.forEach((element, index) => {
+            const elementId = element.id;
+            // Check if score data exists for this element, otherwise use defaults
+            const scoreData = data.scores[elementId]; 
+            
+            initialScores[elementId] = scoreData?.score ?? 0; // Default score to 0 or some indicator
+            initialComments[elementId] = scoreData?.comment ?? "";
+            initialInstructorMentioned[elementId] = scoreData?.instructor_mentioned ?? false;
+            initialStudentMentioned[elementId] = scoreData?.student_mentioned ?? false;
+            
+            // Initialize expanded state - only expand the first element
+             initialExpandedState[elementId] = index === 0;
+          });
 
           setScores(initialScores)
           setComments(initialComments)
           setInstructorMentioned(initialInstructorMentioned)
           setStudentMentioned(initialStudentMentioned)
-          
-          // Initialize expanded state - only expand the first element
-          if (data.elements.length > 0) {
-            const initialExpandedState: Record<string, boolean> = {}
-            data.elements.forEach((element, index) => {
-              initialExpandedState[element.id] = index === 0
-            })
-            setExpandedElements(initialExpandedState)
-          }
+          setExpandedElements(initialExpandedState) // Set expanded state here
         }
       } catch (error) {
         console.error("Error fetching elements:", error)
@@ -110,15 +111,34 @@ export function ElementView({ taskId, sessionId, elementType }: ElementViewProps
   }
   
   const saveElementData = async (elementId: string) => {
+    const currentScore = scores[elementId];
+    const currentComment = comments[elementId] || "";
+    const currentInstructorMentioned = instructorMentioned[elementId] || false;
+    const currentStudentMentioned = studentMentioned[elementId] || false;
+
+    // Only proceed with saving if there's a valid score (1-4) OR 
+    // if there's no score BUT there is a comment or a mention flag is true.
+    // This allows saving mentions/comments even without a score yet.
+    const isValidScore = currentScore >= 1 && currentScore <= 4;
+    const hasInteraction = currentComment.trim().length > 0 || currentInstructorMentioned || currentStudentMentioned;
+
+    if (!isValidScore && !hasInteraction) {
+      console.log("Skipping save for element", elementId, "- no valid score or interaction.");
+      return; // Don't save if there's no valid score and no interaction
+    }
+
     try {
+      // Use the score if valid, otherwise pass null if only interaction is present
+      const scoreToSave = isValidScore ? currentScore : null; 
+      
       await saveElementScore(
         sessionId, 
         elementId, 
-        scores[elementId] || 0, 
-        comments[elementId] || "",
-        instructorMentioned[elementId] || false,
-        studentMentioned[elementId] || false
-      )
+        scoreToSave, // Pass null if score is not 1-4 
+        currentComment, 
+        currentInstructorMentioned, 
+        currentStudentMentioned
+      );
     } catch (error) {
       console.error("Error saving element data:", error)
     }

@@ -67,6 +67,20 @@ type StudentData = {
   created_at: string
 }
 
+// Add ScenarioData type definition
+type ScenarioData = {
+  id: string;
+  template_id: string;
+  title: string;
+  aircraft_type: string | null;
+  departure_airport: string | null;
+  arrival_airport: string | null;
+  flight_conditions: string | null;
+  scenario_text: string;
+  created_by: string | null;
+  created_at: string | null;
+};
+
 // Cache for frequently accessed data
 const cache = {
   templates: new Map<string, TemplateData>(),
@@ -230,16 +244,41 @@ export const getSession = async (sessionId: string): Promise<SessionData | null>
   return data
 }
 
-// Session with template data
-export const getSessionWithTemplate = async (
+// Session with template and potentially scenario data
+export const getSessionWithDetails = async (
   sessionId: string,
-): Promise<{ session: SessionData; template: TemplateData | null } | null> => {
-  const session = await getSession(sessionId)
-  if (!session) return null
+): Promise<{ 
+  session: SessionData; 
+  template: TemplateData | null; 
+  scenario: ScenarioData | null; 
+} | null> => {
+  const session = await getSession(sessionId);
+  if (!session) return null;
 
-  const template = session.template_id ? await getTemplate(session.template_id) : null
+  // Fetch template
+  const template = session.template_id 
+    ? await getTemplate(session.template_id) 
+    : null;
 
-  return { session, template }
+  // Fetch scenario if scenario_id exists
+  let scenario: ScenarioData | null = null;
+  if (session.scenario_id) {
+    const supabase = createClient();
+    const { data: scenarioData, error: scenarioError } = await supabase
+      .from('scenarios')
+      .select('*')
+      .eq('id', session.scenario_id)
+      .single();
+      
+    if (scenarioError) {
+      console.error("Error fetching scenario for session:", scenarioError);
+      // Don't fail the whole fetch if scenario lookup fails, just return null scenario
+    } else {
+      scenario = scenarioData;
+    }
+  }
+
+  return { session, template, scenario };
 }
 
 // Get completed tasks for a session
@@ -277,9 +316,16 @@ export const getElementScoresForSession = async (
 
   const { data, error } = await query
 
-  if (error || !data) {
-    console.error("Error fetching element scores:", error)
+  // Only log an error if the Supabase client actually returned an error object
+  if (error) {
+    console.error("Error fetching element scores:", error) 
     return {}
+  }
+  
+  // If data is null/undefined or empty, it means no scores found, which is not an error itself.
+  // Return empty object in this case too.
+  if (!data) {
+      return {}
   }
 
   const scores: Record<string, { score: number; comment: string; instructor_mentioned: boolean; student_mentioned: boolean }> = {}
@@ -299,23 +345,35 @@ export const getElementScoresForSession = async (
 export const saveElementScore = async (
   sessionId: string,
   elementId: string,
-  score: number,
+  score: number | null,
   comment = "",
   instructorMentioned = false,
   studentMentioned = false
 ): Promise<boolean> => {
   const supabase = createClient()
-  const { error } = await supabase.from("session_elements").upsert({
-    session_id: sessionId,
-    element_id: elementId,
-    score: score,
-    instructor_comment: comment,
-    instructor_mentioned: instructorMentioned,
-    student_mentioned: studentMentioned,
-  })
+  
+  // Prepare upsert data, ensuring score is included only if not null,
+  // or explicitly setting it to null if that's desired behaviour for the DB.
+  // Assuming the DB column `score` is nullable.
+  const upsertData: any = {
+      session_id: sessionId,
+      element_id: elementId,
+      score: score, // Directly pass the value (number or null)
+      instructor_comment: comment,
+      instructor_mentioned: instructorMentioned,
+      student_mentioned: studentMentioned,
+  };
+
+  // Optional: Clean up null values if your DB handles default values better
+  // Object.keys(upsertData).forEach(key => upsertData[key] === null && delete upsertData[key]);
+
+  const { error } = await supabase
+    .from("session_elements")
+    .upsert(upsertData);
 
   if (error) {
-    console.error("Error saving element score:", error)
+    // Log the data that caused the error for easier debugging
+    console.error("Error saving element score:", error, "Payload:", upsertData);
     return false
   }
 

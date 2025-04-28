@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
-import { getSessionWithTemplate } from "@/lib/supabase/data-fetchers"
+import { getSessionWithDetails } from "@/lib/supabase/data-fetchers"
 import { TasksList } from "@/components/TasksList"
 import { TaskPanel } from "@/components/TaskPanel"
 import { SessionHeader } from "@/components/SessionHeader"
+import { ScenarioDetails } from "@/components/ScenarioDetails"
 
 export default function SessionPage() {
   const { id } = useParams()
   const [session, setSession] = useState<any>(null)
   const [template, setTemplate] = useState<any>(null)
+  const [scenario, setScenario] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [currentTask, setCurrentTask] = useState<any>(null)
   const [currentArea, setCurrentArea] = useState<any>(null)
@@ -19,15 +21,22 @@ export default function SessionPage() {
     const fetchSession = async () => {
       setLoading(true)
       try {
-        const sessionData = await getSessionWithTemplate(id as string)
+        const sessionData = await getSessionWithDetails(id as string)
         if (sessionData) {
           setSession(sessionData.session)
           setTemplate(sessionData.template)
+          setScenario(sessionData.scenario)
         } else {
            console.error("Session data not found for ID:", id)
+           setSession(null)
+           setTemplate(null)
+           setScenario(null)
         }
       } catch (error) {
-        console.error("Error fetching session:", error)
+        console.error("Error fetching session details:", error)
+         setSession(null)
+         setTemplate(null)
+         setScenario(null)
       } finally {
         setLoading(false)
       }
@@ -86,6 +95,8 @@ export default function SessionPage() {
       <div className="container mx-auto px-4 py-6">
         <div className="space-y-6">
           <SessionHeader session={session} template={template} />
+          
+          {scenario && <ScenarioDetails scenario={scenario} />}
           
           <div className="grid grid-cols-4 gap-6">
             <div className="col-span-1">
