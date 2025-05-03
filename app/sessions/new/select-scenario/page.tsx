@@ -1,16 +1,16 @@
 "use client"
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client"; 
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getScenariosForTemplate, createNewSession } from '@/lib/supabase/data-fetchers-fix'; // Import fetcher and creator
+import { getScenariosForTemplate, createNewSession, prepopulateSessionElements } from '@/lib/supabase/data-fetchers';
 import type { User } from "@supabase/supabase-js";
 
 type Scenario = {
@@ -33,6 +33,8 @@ function SelectScenarioContent() {
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null); // null represents "No Scenario"
   const [user, setUser] = useState<User | null>(null);
 
+  const supabase = useRef(createSupabaseBrowserClient()).current
+
   // Read data passed from the previous step
   const templateId = searchParams.get('templateId');
   const studentId = searchParams.get('studentId');
@@ -43,7 +45,6 @@ function SelectScenarioContent() {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      const supabase = createClient();
 
       // 1. Check auth session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -75,7 +76,7 @@ function SelectScenarioContent() {
     };
 
     fetchData();
-  }, [templateId, studentId, sessionName, router, toast]);
+  }, [templateId, studentId, sessionName, router, toast, supabase]);
 
   const handleCreateSession = async () => {
     if (creating) return; // Prevent double clicks
@@ -96,9 +97,9 @@ function SelectScenarioContent() {
 
     const sessionPayload = {
       session_name: sessionName,
+      instructor_id: user.id, // Use instructor_id as required by sessions schema
       template_id: templateId,
       student_id: studentId, // This should be the student's user_id
-      instructor_id: user.id, // Current logged-in user
       scenario_id: selectedScenarioId, // Use the selected ID (null if "No Scenario")
       notes: notes || null, // Pass notes or null
       // Add any other required fields for session creation with default values if needed
@@ -107,13 +108,22 @@ function SelectScenarioContent() {
     console.log("Creating session with final payload:", sessionPayload);
 
     try {
-      const newSession = await createNewSession(sessionPayload); // Call the actual creation function
+      // Step 1: Create the session
+      const newSession = await createNewSession(sessionPayload); 
 
       if (!newSession || !newSession.id) {
           throw new Error("Session creation failed. The function did not return a valid session.");
       }
+      
+      // Step 2: Pre-populate session elements (await this!)
+      const prepResult = await prepopulateSessionElements(newSession.id, sessionPayload.template_id);
+      if (!prepResult.success) {
+          console.error("Failed to prepopulate session elements:", prepResult.error);
+          toast({ title: "Warning", description: "Could not initialize all evaluation elements. Please refresh or contact support.", variant: "destructive" });
+      }
 
-      toast({ title: "Success!", description: "Session created successfully.", variant: "success" });
+      // Step 3: Show success and navigate
+      toast({ title: "Success!", description: "Session created successfully.", variant: "default" });
       router.push(`/sessions/${newSession.id}`); // Navigate to the new session
 
     } catch (createError: any) {

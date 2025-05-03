@@ -1,5 +1,4 @@
-import { createClient } from "./client"
-import { createClient as createBrowserClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from "./client"
 import { SupabaseClient } from '@supabase/supabase-js'
 
 // Type definitions for better type safety
@@ -138,7 +137,7 @@ export const getTemplate = async (templateId: string): Promise<TemplateData | nu
     return cache.templates.get(templateId) || null
   }
 
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase.from("templates").select("*").eq("id", templateId).single()
 
   if (error || !data) {
@@ -158,7 +157,7 @@ export const getAreasByTemplate = async (templateId: string): Promise<AreaData[]
     return cache.areasByTemplate.get(templateId) || []
   }
 
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase.from("areas").select("*").eq("template_id", templateId).order("order_number")
 
   if (error || !data) {
@@ -179,7 +178,7 @@ export const getTasksByArea = async (areaId: string): Promise<TaskData[]> => {
     return cache.tasksByArea.get(areaId) || []
   }
 
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase.from("tasks").select("*").eq("area_id", areaId).order("order_letter")
 
   if (error || !data) {
@@ -205,7 +204,7 @@ export const getElementsByTask = async (
     return cache.elementsByTask.get(cacheKey) || []
   }
 
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   let query = supabase.from("elements").select("*").eq("task_id", taskId).order("code")
 
   if (elementType) {
@@ -227,7 +226,7 @@ export const getElementsByTask = async (
 
 // Instructor notes fetchers
 export const getInstructorNotesByElement = async (elementId: string): Promise<InstructorNoteData[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase
     .from("instructor_notes")
     .select("*")
@@ -244,7 +243,7 @@ export const getInstructorNotesByElement = async (elementId: string): Promise<In
 
 // Sample questions fetchers
 export const getSampleQuestionsByElement = async (elementId: string): Promise<SampleQuestionData[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase
     .from("sample_questions")
     .select("*")
@@ -261,7 +260,7 @@ export const getSampleQuestionsByElement = async (elementId: string): Promise<Sa
 
 // Session fetchers
 export const getSession = async (sessionId: string): Promise<SessionData | null> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase.from("sessions").select("*").eq("id", sessionId).single()
 
   if (error || !data) {
@@ -329,7 +328,7 @@ export const getSessionWithDetails = async (
   // Fetch scenario if scenario_id exists
   let scenario: ScenarioData | null = null;
   if (session.scenario_id) {
-    const supabase = createClient();
+    const supabase = createSupabaseBrowserClient();
     const { data: scenarioData, error: scenarioError } = await supabase
       .from('scenarios')
       .select('*')
@@ -349,7 +348,7 @@ export const getSessionWithDetails = async (
 
 // Get completed tasks for a session
 export const getCompletedTasksForSession = async (sessionId: string): Promise<string[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase
     .from("session_tasks")
     .select("task_id")
@@ -369,7 +368,7 @@ export const getElementScoresForSession = async (
   sessionId: string,
   elementIds?: string[],
 ): Promise<Record<string, { score: number; comment: string; instructor_mentioned: boolean; student_mentioned: boolean }>> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   let query = supabase
     .from("session_elements")
@@ -416,7 +415,7 @@ export const saveElementScore = async (
   instructorMentioned = false,
   studentMentioned = false
 ): Promise<boolean> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   
   // Prepare upsert data, ensuring score is included only if not null,
   // or explicitly setting it to null if that's desired behaviour for the DB.
@@ -522,7 +521,7 @@ export const getElementViewData = async (
 
 // Get task data with area
 export const getTaskWithArea = async (taskId: string): Promise<{ task: TaskData; area: AreaData } | null> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   // Get task data
   const { data: taskData, error: taskError } = await supabase.from("tasks").select("*").eq("id", taskId).single()
@@ -549,7 +548,7 @@ export const getTaskWithArea = async (taskId: string): Promise<{ task: TaskData;
 
 // Get task scores for a session
 export const getTaskScoresForSession = async (sessionId: string): Promise<any[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   // Get task scores
   const { data: taskScores, error: taskScoresError } = await supabase
@@ -587,7 +586,7 @@ export const getTaskScoresForSession = async (sessionId: string): Promise<any[]>
 
 // Get element scores with details for a session
 export const getElementScoresWithDetailsForSession = async (sessionId: string): Promise<any[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   // Get element scores
   const { data: elementScores, error: elementScoresError } = await supabase
@@ -647,13 +646,13 @@ export const getElementScoresWithDetailsForSession = async (sessionId: string): 
 // Create a new session
 export const createNewSession = async (sessionData: {
   session_name: string
-  user_id: string
+  instructor_id: string
   template_id: string
   scenario_id?: string | null
   notes?: string | null
   student_id: string
 }): Promise<{ id: string } | null> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const insertData: any = {
     ...sessionData,
@@ -677,7 +676,7 @@ export const createNewSession = async (sessionData: {
 
 // Get templates
 export const getTemplates = async (): Promise<TemplateData[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const { data, error } = await supabase.from("templates").select("id, name, description").order("name")
 
@@ -691,7 +690,7 @@ export const getTemplates = async (): Promise<TemplateData[]> => {
 
 // Get scenarios
 export const getScenarios = async (): Promise<any[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const { data, error } = await supabase
     .from("scenarios")
@@ -708,7 +707,7 @@ export const getScenarios = async (): Promise<any[]> => {
 
 // Add function to get students by user ID
 export const getStudentsByUserId = async (userId: string): Promise<StudentData[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   const { data, error } = await supabase
     .from("students") // Query the public.students table
     .select("*")
@@ -728,7 +727,7 @@ export const getFullHierarchy = async (
   templateId: string,
   sessionId: string // Add sessionId argument
 ): Promise<AreaWithTasksAndElements[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   // 1. Fetch all areas for the template
   const { data: areasData, error: areasError } = await supabase
@@ -872,7 +871,7 @@ export const fetchElementDetails = async (
 ): Promise<ElementFullData | null> => {
   if (!elementId || !sessionId) return null;
 
-  const supabase = createClient();
+  const supabase = createSupabaseBrowserClient();
 
   // 1. Fetch base element data
   const { data: elementData, error: elementError } = await supabase
@@ -952,7 +951,9 @@ export const saveElementEvaluation = async (
     return { success: false, error: "Missing required arguments." };
   }
 
-  const supabase = createClient();
+  const supabase = createSupabaseBrowserClient();
+
+  console.log(`[saveElementEvaluation] Saving: sessionId=${sessionId}, elementId=${elementId}, performance=${performance}, notes=${notes}`);
 
   const { data, error } = await supabase
     .from('session_elements')
@@ -962,8 +963,8 @@ export const saveElementEvaluation = async (
         element_id: elementId,
         performance_status: performance,
         instructor_comment: notes,
-        // Optionally set needs_review based on performance
         needs_review: performance === 'unsatisfactory',
+        score: null, // or keep as is if you want to allow score
       },
       {
         onConflict: 'session_id, element_id', // Specify columns for conflict detection
@@ -972,17 +973,118 @@ export const saveElementEvaluation = async (
     .select(); // Select to confirm the operation
 
   if (error) {
-    console.error("Error saving element evaluation:", error);
+    // Enhanced error logging
+    console.error("Error saving element evaluation. Raw error:", error); 
+    if (error.message) console.error("Supabase Error Message:", error.message);
+    if (error.details) console.error("Supabase Error Details:", error.details);
+    if (error.hint) console.error("Supabase Error Hint:", error.hint);
+    if (error.code) console.error("Supabase Error Code:", error.code);
     return { success: false, error };
   }
 
-  console.log("Saved evaluation for element:", elementId, "in session:", sessionId, data);
+  console.log(`[saveElementEvaluation] Success: sessionId=${sessionId}, elementId=${elementId}, performance=${performance}`);
   return { success: true };
+};
+
+// Helper function to get all element IDs for a given template ID
+const getElementIdsForTemplate = async (supabase: SupabaseClient, templateId: string): Promise<string[]> => {
+  // Step 1: Fetch area IDs for the template
+  const { data: areasData, error: areasError } = await supabase
+    .from('areas')
+    .select('id')
+    .eq('template_id', templateId);
+
+  if (areasError) {
+    console.error(`Error fetching areas for template ${templateId}:`, areasError, areasError?.message, areasError?.details);
+    return [];
+  }
+  if (!areasData || areasData.length === 0) {
+    console.warn(`No areas found for template ${templateId}`);
+    return [];
+  }
+  const areaIds = areasData.map(area => area.id);
+
+  // Step 2: Fetch task IDs for these areas
+  const { data: tasksData, error: tasksError } = await supabase
+    .from('tasks')
+    .select('id')
+    .in('area_id', areaIds);
+
+  if (tasksError) {
+    console.error(`Error fetching tasks for template ${templateId}:`, tasksError, tasksError?.message, tasksError?.details);
+    return [];
+  }
+  if (!tasksData || tasksData.length === 0) {
+    console.warn(`No tasks found for areas in template ${templateId}`);
+    return [];
+  }
+  const taskIds = tasksData.map(task => task.id);
+
+  // Step 3: Fetch element IDs for these tasks
+  const { data: elementsData, error: elementsError } = await supabase
+    .from('elements')
+    .select('id')
+    .in('task_id', taskIds);
+
+  if (elementsError) {
+    console.error(`Error fetching elements for tasks [${taskIds.join(', ')}]:`, elementsError, elementsError?.message, elementsError?.details);
+    return [];
+  }
+
+  return elementsData ? elementsData.map(el => el.id) : [];
+};
+
+// Pre-populates session_elements with default 'not-observed' status for a new session
+export const prepopulateSessionElements = async (
+  sessionId: string,
+  templateId: string
+): Promise<{ success: boolean; error?: any }> => {
+  if (!sessionId || !templateId) {
+    console.error("Missing required arguments for prepopulateSessionElements");
+    return { success: false, error: "Missing session or template ID." };
+  }
+
+  const supabase = createSupabaseBrowserClient(); // Use server client potentially
+
+  try {
+    const elementIds = await getElementIdsForTemplate(supabase, templateId);
+
+    if (elementIds.length === 0) {
+      console.log(`No elements found for template ${templateId}, skipping prepopulation.`);
+      return { success: true }; // Not an error if template has no elements
+    }
+
+    const defaultElementRecords = elementIds.map(elementId => ({
+      session_id: sessionId,
+      element_id: elementId,
+      performance_status: 'not-observed' as const, // Ensure correct type
+      instructor_comment: '', // Default empty comment
+      needs_review: false, // Default
+      score: null, // Assuming nullable score column
+    }));
+
+    // Bulk insert the default records
+    const { error: insertError } = await supabase
+      .from('session_elements')
+      .insert(defaultElementRecords);
+
+    if (insertError) {
+      console.error(`Error bulk inserting default session elements for session ${sessionId}:`, insertError);
+      return { success: false, error: insertError };
+    }
+
+    console.log(`Successfully prepopulated ${defaultElementRecords.length} elements for session ${sessionId}`);
+    return { success: true };
+
+  } catch (error) {
+    console.error(`Unexpected error during prepopulation for session ${sessionId}:`, error);
+    return { success: false, error };
+  }
 };
 
 // Fetch session notes
 export const getSessionNotes = async (sessionId: string): Promise<string | null> => {
-  const supabase = createClient();
+  const supabase = createSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("sessions")
     .select("notes")
@@ -997,7 +1099,7 @@ export const getSessionNotes = async (sessionId: string): Promise<string | null>
 
 // Update session notes
 export const updateSessionNotes = async (sessionId: string, notes: string): Promise<boolean> => {
-  const supabase = createClient();
+  const supabase = createSupabaseBrowserClient();
   const { error } = await supabase
     .from("sessions")
     .update({ notes })
@@ -1011,7 +1113,7 @@ export const updateSessionNotes = async (sessionId: string, notes: string): Prom
 
 // Fetch session history (lifecycle + element evaluations)
 export const fetchSessionHistory = async (sessionId: string) => {
-  const supabase = createClient();
+  const supabase = createSupabaseBrowserClient();
   // 1. Get session lifecycle events
   const { data: sessionData, error: sessionError } = await supabase
     .from("sessions")
@@ -1032,3 +1134,25 @@ export const fetchSessionHistory = async (sessionId: string) => {
     errors: { sessionError, elementError }
   };
 };
+
+export async function getScenariosForTemplate(templateId: string) {
+  if (!templateId) {
+    console.log("getScenariosForTemplate called without a templateId");
+    return []; // Return empty if no templateId is provided
+  }
+
+  const supabase = createSupabaseBrowserClient(); 
+
+  const { data, error } = await supabase
+    .from('scenarios')
+    .select('*') // Select all scenario columns, adjust if needed
+    .eq('template_id', templateId)
+    .order('title'); // Optional: Order scenarios by title
+
+  if (error) {
+    console.error('Error fetching scenarios for template:', error);
+    return []; 
+  }
+
+  return data || [];
+}
