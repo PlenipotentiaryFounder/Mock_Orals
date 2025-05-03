@@ -523,8 +523,8 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
       </CardHeader>
       {/* Main Scrollable Content (Tabs, etc.) */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
-        {/* Main Content */}
-        <div className="flex-1 min-h-0 flex flex-col border-r overflow-hidden">
+        {/* Make the main content area scrollable, not the whole card */}
+        <div className="flex-1 min-h-0 flex flex-col border-r overflow-y-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
             <div className="px-2 md:px-4 pt-2 md:pt-3 border-b flex-shrink-0">
               <TabsList className="grid w-full grid-cols-3 h-9">
@@ -619,14 +619,14 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
                 </div>
               )}
             </TabsContent>
-            <TabsContent value="notes" className="flex-1 min-h-0 overflow-y-auto px-2 md:px-4 pb-24 md:pb-20 pt-3 md:pt-4">
+            <TabsContent value="notes" className="flex-1 min-h-0 overflow-y-auto px-2 md:px-4 pb-24 md:pb-20 pt-3 md:pt-4 text-sm max-h-[40vh]">
               {/* Instructor Notes Tab Content */}
               {element.instructorNotes && element.instructorNotes.length > 0 ? (
                 <ul className="space-y-3">
                   {element.instructorNotes.map((note, idx) => (
-                    <li key={note.id} className="bg-muted rounded p-2 border">
-                      <div className="text-sm font-medium mb-1">{note.note_text}</div>
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                    <li key={note.id} className="bg-muted rounded p-2 border text-xs">
+                      <div className="font-medium mb-1">{note.note_text}</div>
+                      <div className="text-[11px] text-muted-foreground flex flex-wrap gap-2">
                         {note.source_title && (
                           <span>Source: {note.source_title}</span>
                         )}
@@ -641,21 +641,21 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
                   ))}
                 </ul>
               ) : (
-                <div className="text-sm text-muted-foreground">No instructor notes for this element.</div>
+                <div className="text-xs text-muted-foreground">No instructor notes for this element.</div>
               )}
             </TabsContent>
-            <TabsContent value="questions" className="flex-1 min-h-0 overflow-y-auto px-2 md:px-4 pb-24 md:pb-20 pt-3 md:pt-4">
+            <TabsContent value="questions" className="flex-1 min-h-0 overflow-y-auto px-2 md:px-4 pb-24 md:pb-20 pt-3 md:pt-4 text-sm max-h-[40vh]">
               {/* Questions Tab Content */}
               {element.sampleQuestions && element.sampleQuestions.length > 0 ? (
                 <ul className="space-y-3">
                   {element.sampleQuestions.map((q, idx) => (
-                    <li key={q.id} className="bg-muted rounded p-2 border text-sm">
+                    <li key={q.id} className="bg-muted rounded p-2 border text-xs">
                       {q.question_text}
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="text-sm text-muted-foreground">No sample questions for this element.</div>
+                <div className="text-xs text-muted-foreground">No sample questions for this element.</div>
               )}
             </TabsContent>
           </Tabs>

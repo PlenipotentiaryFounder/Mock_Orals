@@ -20,8 +20,6 @@ interface WorkspacePanelProps {
 
 export function WorkspacePanel({ children }: WorkspacePanelProps) {
   return (
-    <ScrollArea className="h-full w-full">
-      <div className="p-4">{children}</div>
-    </ScrollArea>
+    <div className="h-full w-full flex flex-col p-4">{children}</div>
   )
 }
