@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getSessionWithDetails, getTaskScoresForSession, getElementScoresWithDetailsForSession, SessionData, TemplateData, ScenarioData } from "@/lib/supabase/data-fetchers";
+// import { motion, AnimatePresence } from "framer-motion"; // Temporarily comment out animation
 import { HeroSection } from "@/components/reports/insights/HeroSection";
-import { ProgressChart } from "@/components/reports/insights/ProgressChart";
+// import { ProgressChart } from "@/components/reports/insights/ProgressChart"; // Temporarily comment out chart
 import { StrengthsCard } from "@/components/reports/insights/StrengthsCard";
 import { ImprovementsCard } from "@/components/reports/insights/ImprovementsCard";
 import { ReadinessMeter } from "@/components/reports/insights/ReadinessMeter";
@@ -14,7 +15,6 @@ import { ElementCard } from "@/components/reports/insights/ElementCard";
 import { ScenarioRecap } from "@/components/reports/insights/ScenarioRecap";
 import { ShareBar } from "@/components/reports/insights/ShareBar";
 import { Celebration } from "@/components/reports/insights/Celebration";
-import { motion, AnimatePresence } from "framer-motion";
 
 const TABS = [
   { key: "insights", label: "Insights" },
@@ -46,6 +46,7 @@ export default function ReportPage() {
         setElementScores(await getElementScoresWithDetailsForSession(id as string));
       } catch (error) {
         console.error("Error fetching report:", error);
+        // Optionally set an error state here to display to the user
       } finally {
         setLoading(false);
       }
@@ -95,20 +96,21 @@ export default function ReportPage() {
             ))}
           </nav>
         </div>
-        {/* Tab Content with Animation */}
-        <AnimatePresence mode="wait">
-          <motion.div
+        {/* Tab Content - Temporarily remove animation wrapper */}
+        {/* <AnimatePresence mode="wait"> */}
+          {/* <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.25 }}
-          >
+          > */}
             {activeTab === "insights" && (
               <div className="space-y-8">
                 <Celebration session={session} />
                 <ReadinessMeter session={session} taskScores={taskScores} />
-                <ProgressChart taskScores={taskScores} />
+                {/* <ProgressChart taskScores={taskScores} /> */}
+                <div className="text-center text-muted-foreground p-4 border rounded-lg bg-white">Chart temporarily disabled</div>
                 <div className="flex flex-col md:flex-row gap-6">
                   <StrengthsCard taskScores={taskScores} />
                   <ImprovementsCard taskScores={taskScores} />
@@ -131,8 +133,8 @@ export default function ReportPage() {
             {activeTab === "scenario" && (
               <ScenarioRecap scenario={scenario} />
             )}
-          </motion.div>
-        </AnimatePresence>
+          {/* </motion.div> */}
+        {/* </AnimatePresence> */}
       </div>
     </div>
   );
