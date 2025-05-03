@@ -1,14 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 // Define context type
 interface AuthContextType {
   session: any; // Replace 'any' with Session type from @supabase/supabase-js if available
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Add type for props
 interface AuthProviderProps {
@@ -17,18 +17,16 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<any>(null); // Use Session type here too
-  const supabase = createClient();
+  const supabase = useRef(createSupabaseBrowserClient()).current;
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
     });
-
-    // Check if authListener and its subscription are defined and unsubscribe
+    // Get initial session
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
     return () => {
-      if (authListener?.subscription && typeof authListener.subscription.unsubscribe === 'function') {
-        authListener.subscription.unsubscribe();
-      }
+      authListener?.subscription.unsubscribe();
     };
   }, [supabase]);
 
@@ -40,5 +38,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }; 

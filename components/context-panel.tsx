@@ -16,10 +16,16 @@ import {
   PlusCircle,
   Trash2,
   Edit,
+  ChevronDown,
+  ChevronUp,
+  Maximize2,
+  AlertTriangle,
+  Check,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 /**
  * ContextPanel - Provides contextual information and note-taking capabilities
@@ -36,15 +42,18 @@ interface ContextPanelProps {
   scenario: any
   sessionNotes: string
   onSaveSessionNotes: (notes: string) => void
-  sessionHistory?: any
-  loadingHistory?: boolean
+  deficiencyElements?: any[]
+  loadingDeficiencies?: boolean
   defaultTab?: string
+  onDeficiencyElementSelect?: (elementId: string) => void;
 }
 
-export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessionHistory, loadingHistory, defaultTab }: ContextPanelProps) {
+export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, deficiencyElements = [], loadingDeficiencies = false, defaultTab, onDeficiencyElementSelect }: ContextPanelProps) {
   const [activeTab, setActiveTab] = useState(defaultTab || "scenario")
   const [notesValue, setNotesValue] = useState(sessionNotes)
   const [saving, setSaving] = useState(false)
+  const [briefingOpen, setBriefingOpen] = useState(true)
+  const [popoutOpen, setPopoutOpen] = useState(false)
 
   // Keep notesValue in sync with prop
   useEffect(() => {
@@ -77,9 +86,9 @@ export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessi
               <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
               Notes
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex-1 text-xs">
-              <History className="h-3.5 w-3.5 mr-1.5" />
-              History
+            <TabsTrigger value="deficiencies" className="flex-1 text-xs">
+              <AlertTriangle className="h-3.5 w-3.5 mr-1.5 text-yellow-500" />
+              Deficiencies
             </TabsTrigger>
           </TabsList>
         </div>
@@ -87,10 +96,79 @@ export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessi
         <ScrollArea className="flex-1">
           <TabsContent value="scenario" className="p-4 space-y-4 m-0">
             <div>
-              <h3 className="text-sm font-medium mb-2">{scenario.title}</h3>
-
+              <h3 className="text-sm font-medium mb-2 flex items-center justify-between">
+                {scenario.title}
+                <span className="flex gap-2">
+                  <button
+                    className="inline-flex items-center px-2 py-1 rounded hover:bg-muted transition"
+                    onClick={() => setBriefingOpen((v) => !v)}
+                    aria-label={briefingOpen ? "Collapse Briefing" : "Expand Briefing"}
+                  >
+                    {briefingOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                  <Dialog open={popoutOpen} onOpenChange={setPopoutOpen}>
+                    <DialogTrigger asChild>
+                      <button
+                        className="inline-flex items-center px-2 py-1 rounded hover:bg-muted transition"
+                        aria-label="Pop Out Briefing"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl w-full">
+                      <DialogHeader>
+                        <DialogTitle>Scenario Briefing</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-2 text-xs">
+                          {scenario.aircraft_type && (
+                            <div className="flex items-center gap-1.5">
+                              <Plane className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Aircraft:</span>
+                              <Badge variant="outline" className="ml-auto">
+                                {scenario.aircraft_type}
+                              </Badge>
+                            </div>
+                          )}
+                          {scenario.departure_airport && (
+                            <div className="flex items-center gap-1.5">
+                              <PlaneTakeoff className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Departure:</span>
+                              <Badge variant="outline" className="ml-auto">
+                                {scenario.departure_airport}
+                              </Badge>
+                            </div>
+                          )}
+                          {scenario.arrival_airport && (
+                            <div className="flex items-center gap-1.5">
+                              <PlaneLanding className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Arrival:</span>
+                              <Badge variant="outline" className="ml-auto">
+                                {scenario.arrival_airport}
+                              </Badge>
+                            </div>
+                          )}
+                          {scenario.flight_conditions && (
+                            <div className="flex items-center gap-1.5">
+                              <Cloud className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">Conditions:</span>
+                              <Badge variant="outline" className="ml-auto">
+                                {scenario.flight_conditions}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                        <Separator />
+                        <ScrollArea className="max-h-80 rounded-md border bg-muted/30 p-3">
+                          <p className="text-xs whitespace-pre-wrap">{scenario.scenario_text}</p>
+                        </ScrollArea>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </span>
+              </h3>
               {/* Scenario details card */}
-              <Card className="bg-muted/30">
+              <Card className="bg-muted/30 shadow-lg border border-primary/20">
                 <CardContent className="p-3">
                   <div className="grid grid-cols-1 gap-2 text-xs">
                     {scenario.aircraft_type && (
@@ -133,16 +211,25 @@ export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessi
                 </CardContent>
               </Card>
             </div>
-
             <Separator />
-
-            <div>
-              <h4 className="text-xs font-medium mb-2">Scenario Briefing:</h4>
-              <div className="rounded-md border bg-muted/30 p-3">
-                <p className="text-xs whitespace-pre-wrap">{scenario.scenario_text}</p>
+            {briefingOpen && (
+              <div>
+                <h4 className="text-xs font-medium mb-2 flex items-center justify-between">
+                  Scenario Briefing
+                  <button
+                    className="inline-flex items-center px-2 py-1 rounded hover:bg-muted transition text-xs"
+                    onClick={() => setPopoutOpen(true)}
+                    aria-label="Pop Out Briefing"
+                  >
+                    <Maximize2 className="h-3 w-3" />
+                    <span className="ml-1">Pop Out</span>
+                  </button>
+                </h4>
+                <ScrollArea className="max-h-40 rounded-md border bg-muted/30 p-3">
+                  <p className="text-xs whitespace-pre-wrap">{scenario.scenario_text}</p>
+                </ScrollArea>
               </div>
-            </div>
-
+            )}
             {/* Additional scenario resources */}
             <div>
               <h4 className="text-xs font-medium mb-2">Resources:</h4>
@@ -184,56 +271,37 @@ export function ContextPanel({ scenario, sessionNotes, onSaveSessionNotes, sessi
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className="p-4 space-y-4 m-0">
-            <h3 className="text-sm font-medium">Session History</h3>
-            {loadingHistory ? (
-              <div className="text-xs text-muted-foreground">Loading history...</div>
-            ) : sessionHistory && (
-              <div className="space-y-3">
-                {/* Session lifecycle events */}
-                {sessionHistory.session && (
-                  <div className="text-xs p-2 border-l-2 border-muted pl-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Session Created</span>
-                      <span className="text-muted-foreground">{new Date(sessionHistory.session.created_at).toLocaleString()}</span>
-                    </div>
-                    {sessionHistory.session.date_started && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Session Started</span>
-                        <span className="text-muted-foreground">{new Date(sessionHistory.session.date_started).toLocaleString()}</span>
-                      </div>
-                    )}
-                    {sessionHistory.session.date_completed && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Session Completed</span>
-                        <span className="text-muted-foreground">{new Date(sessionHistory.session.date_completed).toLocaleString()}</span>
-                      </div>
-                    )}
-                    {sessionHistory.session.updated_at && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Notes Last Updated</span>
-                        <span className="text-muted-foreground">{new Date(sessionHistory.session.updated_at).toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Element evaluations */}
-                {sessionHistory.elementEvaluations && sessionHistory.elementEvaluations.length > 0 ? (
-                  sessionHistory.elementEvaluations.map((ev: any, idx: number) => (
-                    <div key={idx} className="text-xs p-2 border-l-2 border-blue-200 pl-2">
-                      <div className="flex justify-between">
-                        <span className="font-medium">Element Evaluated</span>
-                        <span className="text-muted-foreground">{new Date(ev.updated_at).toLocaleString()}</span>
-                      </div>
-                      <div>Status: <span className="font-mono">{ev.performance_status}</span></div>
-                      {ev.instructor_comment && <div>Comment: <span className="italic">{ev.instructor_comment}</span></div>}
-                      <div>Element ID: <span className="font-mono">{ev.element_id}</span></div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-xs text-muted-foreground">No element evaluations yet.</div>
-                )}
-              </div>
+          <TabsContent value="deficiencies" className="p-4 space-y-4 m-0">
+            <h3 className="text-sm font-medium">Written Test Deficiencies</h3>
+            {loadingDeficiencies ? (
+              <div className="text-xs text-muted-foreground">Loading deficiencies...</div>
+            ) : deficiencyElements && deficiencyElements.length > 0 ? (
+              <ScrollArea className="max-h-56 rounded-md border bg-muted/30 p-1 pr-2">
+                <div className="space-y-1">
+                  {deficiencyElements.map((ev: any, idx: number) => (
+                    <button
+                      key={idx}
+                      className="flex items-center gap-1.5 w-full text-left px-2 py-1 rounded bg-yellow-50 border-l-2 border-yellow-400 hover:bg-yellow-100 transition text-xs"
+                      onClick={() => onDeficiencyElementSelect?.(ev.element_id)}
+                      title={ev.description}
+                      type="button"
+                    >
+                      {/* Icon logic for deficiency status */}
+                      {ev.performance_status === "satisfactory" ? (
+                        <AlertTriangle className="h-3 w-3 text-green-600" />
+                      ) : ev.performance_status === "unsatisfactory" ? (
+                        <AlertTriangle className="h-3 w-3 text-red-600" />
+                      ) : (
+                        <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                      )}
+                      <span className="font-mono font-semibold truncate max-w-[5.5rem]">{ev.code}</span>
+                      <span className="truncate text-xs text-muted-foreground max-w-[10rem]">{ev.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="text-xs text-muted-foreground">No written test deficiencies flagged for this session.</div>
             )}
           </TabsContent>
         </ScrollArea>

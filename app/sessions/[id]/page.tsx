@@ -7,7 +7,7 @@ import {
   getFullHierarchy, // Import new fetcher
   getSessionNotes, // Import notes fetcher
   updateSessionNotes, // Import update function
-  fetchSessionHistory, // Import session history fetcher
+  fetchSessionDeficiencies, // Use new fetcher for deficiencies
   SessionData, // Import types
   TemplateData, 
   ScenarioData, 
@@ -45,8 +45,8 @@ function SessionPageContent() {
     const [hierarchy, setHierarchy] = useState<AreaWithTasksAndElements[]>([]);
     const [sessionNotes, setSessionNotes] = useState<string>("");
     const [loadingNotes, setLoadingNotes] = useState(true);
-    const [sessionHistory, setSessionHistory] = useState<any>(null);
-    const [loadingHistory, setLoadingHistory] = useState(true);
+    const [deficiencyElements, setDeficiencyElements] = useState<any[]>([]);
+    const [loadingDeficiencies, setLoadingDeficiencies] = useState(true);
     
     // State for UI interactions
     const [loadingInitialData, setLoadingInitialData] = useState(true);
@@ -73,6 +73,33 @@ function SessionPageContent() {
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
         return { completed, total, issues, percentage };
     }, [hierarchy]);
+
+    // Compute flat, ordered array of element objects for navigation
+    const elementOrder = useMemo(() => {
+        const elements: { id: string; code: string; description: string }[] = [];
+        hierarchy.forEach(area => {
+            area.tasks.forEach(task => {
+                task.elements.forEach(el => {
+                    elements.push({ id: el.id, code: el.code, description: el.description });
+                });
+            });
+        });
+        return elements;
+    }, [hierarchy]);
+
+    // Find the current element index
+    const currentElementIndex = useMemo(() => {
+        if (!selectedElementId) return -1;
+        return elementOrder.findIndex(el => el.id === selectedElementId);
+    }, [elementOrder, selectedElementId]);
+
+    // Navigation callback
+    const onNavigateElement = (direction: 'next' | 'prev') => {
+        if (currentElementIndex === -1) return;
+        let newIndex = direction === 'next' ? currentElementIndex + 1 : currentElementIndex - 1;
+        if (newIndex < 0 || newIndex >= elementOrder.length) return;
+        setSelectedElementId(elementOrder[newIndex].id);
+    };
 
     // Fetch Session, Template, Scenario details
     useEffect(() => {
@@ -136,13 +163,13 @@ function SessionPageContent() {
             .finally(() => setLoadingNotes(false));
     }, [sessionId]);
 
-    // Fetch session history
+    // Fetch deficiency elements
     useEffect(() => {
         if (!sessionId) return;
-        setLoadingHistory(true);
-        fetchSessionHistory(sessionId)
-            .then(history => setSessionHistory(history))
-            .finally(() => setLoadingHistory(false));
+        setLoadingDeficiencies(true);
+        fetchSessionDeficiencies(sessionId)
+            .then(defs => setDeficiencyElements(defs))
+            .finally(() => setLoadingDeficiencies(false));
     }, [sessionId]);
 
     // Save handler for notes
@@ -155,6 +182,45 @@ function SessionPageContent() {
     // Handler passed to the NavigationPanel
     const handleElementSelect = (elementId: string) => {
         setSelectedElementId(elementId);
+    };
+
+    // Callback for when an element is saved successfully in ElementDetailView
+    const handleElementSaveSuccess = (
+        elementId: string, 
+        newStatus: 'completed' | 'in-progress' | 'issue'
+    ) => {
+        setHierarchy(currentHierarchy => {
+            // Create a deep copy to avoid mutating the original state directly
+            const newHierarchy = JSON.parse(JSON.stringify(currentHierarchy));
+            
+            // Find and update the element status
+            let found = false;
+            for (const area of newHierarchy) {
+                for (const task of area.tasks) {
+                    const elementIndex = task.elements.findIndex((el: any) => el.id === elementId);
+                    if (elementIndex !== -1) {
+                        task.elements[elementIndex].status = newStatus;
+                        found = true;
+                        break; // Exit inner loop once found
+                    }
+                }
+                if (found) break; // Exit outer loop once found
+            }
+
+            if (!found) {
+                console.warn("Saved element not found in hierarchy state:", elementId);
+                return currentHierarchy; // Return original state if not found
+            }
+
+            return newHierarchy;
+        });
+        // Re-fetch hierarchy and deficiencies to ensure real-time updates
+        if (template?.id && sessionId) {
+            getFullHierarchy(template.id, sessionId).then(setHierarchy);
+        }
+        if (sessionId) {
+            fetchSessionDeficiencies(sessionId).then(setDeficiencyElements);
+        }
     };
 
     // Combined loading state
@@ -214,9 +280,10 @@ function SessionPageContent() {
                     scenario={scenario} 
                     sessionNotes={sessionNotes}
                     onSaveSessionNotes={handleSaveSessionNotes}
-                    sessionHistory={sessionHistory}
-                    loadingHistory={loadingHistory}
+                    deficiencyElements={deficiencyElements}
+                    loadingDeficiencies={loadingDeficiencies}
                     defaultTab={view === "timeline" ? "history" : undefined}
+                    onDeficiencyElementSelect={setSelectedElementId}
                   />
                 ) : undefined
             }
@@ -240,15 +307,22 @@ function SessionPageContent() {
             }
         >
             {/* Main content area (WorkspacePanel is inside CommandCenterLayout) */}
+            <div className="h-full min-h-0 flex-1 flex flex-col overflow-hidden">
             {selectedElementId ? (
                 <ElementDetailView 
                     key={selectedElementId} // Re-render when element changes
                     elementId={selectedElementId} 
                     sessionId={sessionId} 
+                    onSaveSuccess={handleElementSaveSuccess}
+                    // Navigation props
+                    elementOrder={elementOrder}
+                    currentElementIndex={currentElementIndex}
+                    onNavigateElement={onNavigateElement}
                 />
             ) : (
                 <SelectElementPlaceholder />
             )}
+            </div>
         </CommandCenterLayout>
     );
 }

@@ -771,7 +771,8 @@ export const getFullHierarchy = async (
     .select(`
       *,
       session_elements (
-        performance_status
+        performance_status,
+        a2_deficiency
       )
     `)
     .in("task_id", taskIds)
@@ -798,15 +799,18 @@ export const getFullHierarchy = async (
   }
 
 
-  // 4. Map session_elements data to element status
+  // 4. Map session_elements data to element status and deficiency
   const elementsWithStatus = elementsData.map((element) => {
     const sessionElement = element.session_elements && Array.isArray(element.session_elements) 
                            ? element.session_elements[0] // Get the first (should be only) entry for this session
                            : element.session_elements; // Handle if Supabase returns object directly (less common now)
 
     let status: 'completed' | 'in-progress' | 'issue' = 'in-progress'; // Default status
+    let a2_deficiency = false;
+    let performance_status: 'satisfactory' | 'unsatisfactory' | 'not-observed' = 'not-observed';
 
     if (sessionElement?.performance_status) {
+        performance_status = sessionElement.performance_status;
         switch (sessionElement.performance_status) {
             case 'satisfactory':
                 status = 'completed';
@@ -819,8 +823,10 @@ export const getFullHierarchy = async (
                 break; 
         }
     }
-    
-    // We only need basic element info + status for the hierarchy view
+    if (sessionElement?.a2_deficiency === true) {
+      a2_deficiency = true;
+    }
+    // We only need basic element info + status + deficiency for the hierarchy view
     return {
         id: element.id,
         code: element.code,
@@ -828,7 +834,9 @@ export const getFullHierarchy = async (
         type: element.type,
         task_id: element.task_id, // Keep task_id for grouping
         status: status,
-    } as ElementBasic & { task_id: string }; // Include task_id temporarily
+        a2_deficiency: a2_deficiency,
+        performance_status: performance_status,
+    } as ElementBasic & { task_id: string; a2_deficiency: boolean; performance_status: 'satisfactory' | 'unsatisfactory' | 'not-observed' };
   });
 
 
@@ -1121,16 +1129,23 @@ export const fetchSessionHistory = async (sessionId: string) => {
     .eq("id", sessionId)
     .single();
 
-  // 2. Get all element evaluations for this session
+  // 2. Get all element evaluations for this session, including a2_deficiency, code, description
   const { data: elementData, error: elementError } = await supabase
     .from("session_elements")
-    .select("element_id, performance_status, instructor_comment, updated_at")
+    .select("element_id, performance_status, instructor_comment, updated_at, a2_deficiency, elements(code, description)")
     .eq("session_id", sessionId)
     .order("updated_at", { ascending: false });
 
+  // Map code/description to top-level for easier use
+  const elementEvaluations = (elementData || []).map(ev => ({
+    ...ev,
+    code: ev.elements?.code,
+    description: ev.elements?.description,
+  }));
+
   return {
     session: sessionData || null,
-    elementEvaluations: elementData || [],
+    elementEvaluations,
     errors: { sessionError, elementError }
   };
 };
@@ -1156,3 +1171,79 @@ export async function getScenariosForTemplate(templateId: string) {
 
   return data || [];
 }
+
+// Fetch all elements for a given template (across all areas/tasks)
+export const getAllElementsForTemplate = async (templateId: string) => {
+  const supabase = createSupabaseBrowserClient();
+
+  // 1. Get all area IDs for the template
+  const { data: areas, error: areasError } = await supabase
+    .from('areas')
+    .select('id')
+    .eq('template_id', templateId);
+  if (areasError || !areas) {
+    console.error('Error fetching areas for template:', areasError);
+    return [];
+  }
+  const areaIds = areas.map(a => a.id);
+  if (areaIds.length === 0) return [];
+
+  // 2. Get all task IDs for these areas
+  const { data: tasks, error: tasksError } = await supabase
+    .from('tasks')
+    .select('id')
+    .in('area_id', areaIds);
+  if (tasksError || !tasks) {
+    console.error('Error fetching tasks for areas:', tasksError);
+    return [];
+  }
+  const taskIds = tasks.map(t => t.id);
+  if (taskIds.length === 0) return [];
+
+  // 3. Get all elements for these tasks
+  const { data: elements, error: elementsError } = await supabase
+    .from('elements')
+    .select('*')
+    .in('task_id', taskIds)
+    .order('code');
+  if (elementsError || !elements) {
+    console.error('Error fetching elements for tasks:', elementsError);
+    return [];
+  }
+  return elements;
+};
+
+// Set a2_deficiency = true for selected element IDs in a session
+export const setA2DeficienciesForSession = async (sessionId: string, elementIds: string[]) => {
+  if (!sessionId || !elementIds || elementIds.length === 0) return;
+  const supabase = createSupabaseBrowserClient();
+  // Supabase upsert/update in bulk
+  const { error } = await supabase
+    .from('session_elements')
+    .update({ a2_deficiency: true })
+    .eq('session_id', sessionId)
+    .in('element_id', elementIds);
+  if (error) {
+    console.error('Error updating a2_deficiency for session elements:', error);
+  }
+};
+
+// Fetch only session elements with a2_deficiency = true for a session
+export const fetchSessionDeficiencies = async (sessionId: string) => {
+  const supabase = createSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("session_elements")
+    .select("element_id, a2_deficiency, performance_status, elements(code, description)")
+    .eq("session_id", sessionId)
+    .eq("a2_deficiency", true);
+  if (error) {
+    console.error("Error fetching session deficiencies:", error);
+    return [];
+  }
+  // Map code/description to top-level for easier use
+  return (data || []).map(ev => ({
+    ...ev,
+    code: ev.elements?.code,
+    description: ev.elements?.description,
+  }));
+};

@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
+import { useRouter } from "next/navigation"
 
 /**
  * CommandBar - The primary control center for instructor actions
@@ -60,6 +61,7 @@ interface CommandBarProps {
 }
 
 export function CommandBar({ session, template, onViewChange, currentView = "standard" }: CommandBarProps) {
+  const router = useRouter();
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false)
@@ -68,10 +70,9 @@ export function CommandBar({ session, template, onViewChange, currentView = "sta
 
   // Handle report generation
   const handleGenerateReport = () => {
-    setIsGeneratingReport(true)
-    setTimeout(() => {
-      setIsGeneratingReport(false)
-    }, 2000)
+    if (session?.id) {
+      router.push(`/reports/${session.id}`);
+    }
   }
 
   // Handle print

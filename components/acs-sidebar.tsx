@@ -5,13 +5,14 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { CalendarDays, FileText, PlusCircle, Users, CheckCircle, LogOut } from "lucide-react"
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { useEffect, useState, useRef } from "react"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import type { User } from "@supabase/supabase-js"
 
 export function AcsSidebar() {
   const pathname = usePathname()
-  const [user, setUser] = useState(null)
-  const supabase = createClient()
+  const [user, setUser] = useState<User | null>(null)
+  const supabase = useRef(createSupabaseBrowserClient()).current
 
   useEffect(() => {
     const fetchUser = async () => {

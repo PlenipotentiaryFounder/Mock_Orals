@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { createClient } from "@/lib/supabase/client"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, AlertCircle, UserPlus, ArrowRight } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -54,12 +54,13 @@ export default function NewSessionPage() {
     phone: "",
   })
 
+  const supabase = useRef(createSupabaseBrowserClient()).current
+
   // Combined useEffect for auth check and data fetching
   useEffect(() => {
     const initializePage = async () => {
       setLoading(true)
       setFormError(null)
-      const supabase = createClient()
 
       // 1. Check Session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -106,7 +107,7 @@ export default function NewSessionPage() {
     }
 
     initializePage()
-  }, [router, toast]) // Dependencies
+  }, [router, toast, supabase]) // Dependencies
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -154,10 +155,8 @@ export default function NewSessionPage() {
     setLoading(true)
     setFormError(null)
     let studentUserIdForSession = selectedStudentUserId;
-    const supabase = createClient();
-    const currentInstructorId = user?.id;
 
-    if (!currentInstructorId) {
+    if (!user?.id) {
       setFormError("Instructor ID not found. Please refresh and try again.");
       setLoading(false);
       return;
@@ -171,7 +170,7 @@ export default function NewSessionPage() {
 
         const studentToInsert = {
           ...newStudentData,
-          instructor_id: currentInstructorId,
+          instructor_id: user.id,
           user_id: crypto.randomUUID()
         }
 
@@ -217,9 +216,9 @@ export default function NewSessionPage() {
         notes: formData.notes || "",
       });
 
-      console.log("Proceeding to scenario selection with params:", params.toString());
+      console.log("Proceeding to deficiency selection with params:", params.toString());
 
-      router.push(`/sessions/new/select-scenario?${params.toString()}`);
+      router.push(`/sessions/new/select-deficiencies?${params.toString()}`);
 
     } catch (error: any) {
       console.error("Proceed Error:", error);

@@ -177,6 +177,12 @@ const QUICK_NOTE_GROUPS = [
   }
 ];
 
+// Utility to detect tablet/iPad
+function isTablet() {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 1024px) and (min-width: 600px), (device-width: 768px)').matches;
+}
+
 export function ElementDetailView({ elementId, sessionId, onSaveSuccess, elementOrder, currentElementIndex, onNavigateElement }: ElementDetailViewProps) {
   const [element, setElement] = useState<ElementFullData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -191,6 +197,9 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
   const [editingText, setEditingText] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true); // For navigation
+  const [rightPanelOpen, setRightPanelOpen] = useState(true); // For quick notes/context
+  const [isTabletDevice, setIsTabletDevice] = useState(false);
 
   const storageKey = `quickNotes_${sessionId}_${elementId}`
 
@@ -198,9 +207,19 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
   useHotkeys("alt+s", () => setPerformance("satisfactory"), [])
   useHotkeys("alt+u", () => setPerformance("unsatisfactory"), [])
   useHotkeys("alt+n", () => setPerformance("not-observed"), [])
-  // Navigation hotkeys need implementation context (e.g., parent component callback)
-  // useHotkeys("alt+left", () => console.log("Navigate to previous element"))
-  // useHotkeys("alt+right", () => console.log("Navigate to next element"))
+  // Navigation hotkeys for switching elements
+  useHotkeys("alt+left", () => { if (onNavigateElement) onNavigateElement('prev') }, [onNavigateElement])
+  useHotkeys("alt+right", () => { if (onNavigateElement) onNavigateElement('next') }, [onNavigateElement])
+  // Alt+C for GetCodi (placeholder)
+  useHotkeys("alt+c", () => { /* TODO: Implement GetCodi */ alert('GetCodi shortcut triggered (to be implemented)') }, [])
+
+  // Detect tablet on mount
+  useEffect(() => {
+    setIsTabletDevice(isTablet());
+    const handleResize = () => setIsTabletDevice(isTablet());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const loadElementDetails = async () => {
@@ -429,6 +448,26 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
   // Main Render Logic using fetched `element` state
   return (
     <Card className="h-full min-h-0 flex-1 flex flex-col overflow-hidden shadow-md relative">
+      {/* Collapsible Left Panel (Navigation) for Tablet */}
+      {isTabletDevice && (
+        <button
+          className="absolute left-0 top-1/2 z-40 bg-muted rounded-r-full p-2 shadow-md"
+          style={{ transform: 'translateY(-50%)' }}
+          onClick={() => setLeftPanelOpen((v) => !v)}
+        >
+          {leftPanelOpen ? <span>&#x25C0;</span> : <span>&#x25B6;</span>}
+        </button>
+      )}
+      {/* Collapsible Right Panel (Quick Notes/Context) for Tablet */}
+      {isTabletDevice && (
+        <button
+          className="absolute right-0 top-1/2 z-40 bg-muted rounded-l-full p-2 shadow-md"
+          style={{ transform: 'translateY(-50%)' }}
+          onClick={() => setRightPanelOpen((v) => !v)}
+        >
+          {rightPanelOpen ? <span>&#x25B6;</span> : <span>&#x25C0;</span>}
+        </button>
+      )}
       {/* Header */}
       <CardHeader className="border-b p-4 flex-shrink-0 sticky top-0 z-30 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="flex justify-between items-start">
@@ -523,8 +562,8 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
       </CardHeader>
       {/* Main Scrollable Content (Tabs, etc.) */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
-        {/* Make the main content area scrollable, not the whole card */}
-        <div className="flex-1 min-h-0 flex flex-col border-r overflow-y-auto">
+        {/* Main Content (conditionally full width on tablet if panels are closed) */}
+        <div className={`flex-1 min-h-0 flex flex-col border-r overflow-y-auto ${isTabletDevice && (!leftPanelOpen || !rightPanelOpen) ? 'w-full' : ''}`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
             <div className="px-2 md:px-4 pt-2 md:pt-3 border-b flex-shrink-0">
               <TabsList className="grid w-full grid-cols-3 h-9">
@@ -660,68 +699,70 @@ export function ElementDetailView({ elementId, sessionId, onSaveSuccess, element
             </TabsContent>
           </Tabs>
         </div>
-        {/* Right Side: Quick Notes Panel (hidden on mobile/tablet, visible on md+) */}
-        <aside className="hidden md:flex w-72 flex-shrink-0 flex-col border-l bg-muted/30 overflow-hidden p-4 space-y-4 min-h-0 max-h-full">
-          <h3 className="text-sm font-semibold mb-2">Quick Notes</h3>
-          <div className="flex-1 min-h-0 max-h-[70vh] overflow-y-auto pr-1">
-            {QUICK_NOTE_GROUPS.map((group, idx) => (
-              <div key={idx} className="mb-3">
-                <div className={`sticky top-0 z-20 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide mb-1 bg-white dark:bg-muted/30 py-1 ${group.color} shadow-sm`}>
-                  <span className="text-lg select-none">{group.icon}</span>
-                  <span>{group.title}</span>
+        {/* Right Side: Quick Notes Panel (hidden/collapsible on tablet, visible on md+) */}
+        {(!isTabletDevice || rightPanelOpen) && (
+          <aside className="hidden md:flex w-72 flex-shrink-0 flex-col border-l bg-muted/30 overflow-hidden p-4 space-y-4 min-h-0 max-h-full">
+            <h3 className="text-sm font-semibold mb-2">Quick Notes</h3>
+            <div className="flex-1 min-h-0 max-h-[70vh] overflow-y-auto pr-1">
+              {QUICK_NOTE_GROUPS.map((group, idx) => (
+                <div key={idx} className="mb-3">
+                  <div className={`sticky top-0 z-20 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide mb-1 bg-white dark:bg-muted/30 py-1 ${group.color} shadow-sm`}>
+                    <span className="text-lg select-none">{group.icon}</span>
+                    <span>{group.title}</span>
+                  </div>
+                  <ul className="space-y-1 ml-6">
+                    {group.notes.map((note, nidx) => (
+                      <li key={nidx}>
+                        <button
+                          className="w-full text-left text-xs rounded px-2 py-1 hover:bg-accent hover:text-accent-foreground transition"
+                          onClick={() => {
+                            setNotes(n => n ? n + (n.endsWith('\n') ? '' : '\n') + group.icon + ' ' + note + '\n' : group.icon + ' ' + note + '\n');
+                          }}
+                        >
+                          {group.icon} {note}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="space-y-1 ml-6">
-                  {group.notes.map((note, nidx) => (
-                    <li key={nidx}>
-                      <button
-                        className="w-full text-left text-xs rounded px-2 py-1 hover:bg-accent hover:text-accent-foreground transition"
-                        onClick={() => {
-                          setNotes(n => n ? n + (n.endsWith('\n') ? '' : '\n') + group.icon + ' ' + note + '\n' : group.icon + ' ' + note + '\n');
-                        }}
-                      >
-                        {group.icon} {note}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <ScrollArea className="flex-1 min-h-0 -mr-4 pr-3 max-h-full">
-            <div className="space-y-2">
-              {quickNotes.map((note, index) => (
-                <Card key={index} className="relative group bg-card text-xs shadow-sm">
-                  <CardContent className="p-2 flex justify-between items-center">
-                    <p className="flex-1 mr-2 break-words">{note.text}</p>
-                    <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditNote(note.id, note.text)} title="Edit Note">
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteNote(note.id)} title="Remove Quick Note">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
               ))}
             </div>
-          </ScrollArea>
-          <div>
-            {editingId ? (
+            <ScrollArea className="flex-1 min-h-0 -mr-4 pr-3 max-h-full">
               <div className="space-y-2">
-                <Textarea
-                  placeholder="Enter new quick note..."
-                  value={editingText}
-                  onChange={(e) => setEditingText(e.target.value)}
-                  className="text-xs min-h-[60px]"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={handleSaveEdit}>Save</Button>
-                </div>
+                {quickNotes.map((note, index) => (
+                  <Card key={index} className="relative group bg-card text-xs shadow-sm">
+                    <CardContent className="p-2 flex justify-between items-center">
+                      <p className="flex-1 mr-2 break-words">{note.text}</p>
+                      <div className="flex-shrink-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditNote(note.id, note.text)} title="Edit Note">
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteNote(note.id)} title="Remove Quick Note">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            ) : null}
-          </div>
-        </aside>
+            </ScrollArea>
+            <div>
+              {editingId ? (
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder="Enter new quick note..."
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className="text-xs min-h-[60px]"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={handleSaveEdit}>Save</Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </aside>
+        )}
       </div>
       {/* Sticky Bottom Navigation always inside the Card, never outside */}
       {elementOrder && typeof currentElementIndex === 'number' && onNavigateElement && (

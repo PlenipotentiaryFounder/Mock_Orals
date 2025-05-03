@@ -2,22 +2,22 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, FileText, Settings, LogOut, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useState } from "react"
+import { useState, useRef } from "react"
 
 export function DashboardNav() {
   const pathname = usePathname()
   const router = useRouter()
   const { toast } = useToast()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const supabase = useRef(createSupabaseBrowserClient()).current
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
-    const supabase = createClient()
     const { error } = await supabase.auth.signOut()
 
     if (error) {

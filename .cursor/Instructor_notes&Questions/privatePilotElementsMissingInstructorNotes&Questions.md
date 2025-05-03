@@ -1,0 +1,194 @@
+# Private Pilot Elements Missing Instructor Notes or Questions
+
+## Format: [ ] Area – Task – Code – Description
+
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K1 – Causes of partial or complete power loss related to the specific type of powerplant(s).
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K2 – System and equipment malfunctions specific to the aircraft.
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K2a – a. Electrical malfunction
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K2b – b. Vacuum/pressure and associated flight instrument malfunctions
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K2c – c. Pitot-static system malfunction
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K2d – d. Electronic flight deck display malfunction
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K2e – e. Landing gear or flap malfunction
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K2f – f. Inoperative trim
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K3 – Causes and remedies for smoke or fire onboard the aircraft.
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K4 – Any other system specific to the aircraft (e.g., supplemental oxygen, deicing).
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.K5 – Inadvertent door or window opening.
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.R1 – Checklist usage for a system or equipment malfunction.
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.R2 – Distractions, task prioritization, loss of situational awareness, or disorientation.
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.R3 – Undesired aircraft state.
+- [x] Emergency Operations – Systems and Equipment Malfunctions – PA.IX.C.R4 – Startle response.
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.K1 – Ground-based navigation (identification, orientation, course determination, equipment, tests, regulations, interference, appropriate use of navigation data, and signal integrity).
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.K2 – Satellite-based navigation (e.g., equipment, regulations, authorized use of databases, and Receiver Autonomous Integrity Monitoring (RAIM)).
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.K3 – Radar assistance to visual flight rules (VFR) aircraft (e.g., operations, equipment, available services, traffic advisories).
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.K4 – Transponder (Mode(s) A, C, and S) and Automatic Dependent Surveillance-Broadcast (ADS-B).
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.R1 – Management of automated navigation and autoflight systems.
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.R2 – Distractions, task prioritization, loss of situational awareness, or disorientation.
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.R3 – Limitations of the navigation system in use.
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.R4 – Loss of a navigation signal.
+- [x] Navigation – Navigation Systems and Radar Services – PA.VI.B.R5 – Use of an electronic flight bag (EFB), if used.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K1 – Pilotage and dead reckoning.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K2 – Magnetic compass errors.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K3 – Topography.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K4 – Selection of appropriate:
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K4a – a. Route
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K4b – b. Altitude(s)
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K4c – c. Checkpoints
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K5a – a. Determining heading, speed, and course
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K5b – b. Wind correction angle
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K5c – c. Estimating time, speed, and distance
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K5d – d. True airspeed and density altitude
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K6 – Power setting selection.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K7 – Planned calculations versus actual results and required corrections.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.R1 – Collision hazards.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.R2 – Distractions, task prioritization, loss of situational awareness, or disorientation.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.R3 – Unplanned fuel/power consumption, if applicable.
+- [x] Night Operations – Night Operations – PA.XI.A.K1 – Physiological aspects of vision related to night flying.
+- [x] Night Operations – Night Operations – PA.XI.A.K2 – Lighting systems identifying airports, runways, taxiways and obstructions, as well as pilot controlled lighting.
+- [x] Night Operations – Night Operations – PA.XI.A.K3 – Airplane equipment and lighting requirements for night operations.
+- [x] Night Operations – Night Operations – PA.XI.A.K4 – Personal equipment essential for night flight.
+- [x] Night Operations – Night Operations – PA.XI.A.K5 – Night orientation, navigation, chart reading techniques and methods for maintaining night vision effectiveness.
+- [x] Night Operations – Night Operations – PA.XI.A.K6 – Night taxi operations.
+- [x] Night Operations – Night Operations – PA.XI.A.K7 – Interpretation of traffic position and direction based solely on position lights.
+- [x] Night Operations – Night Operations – PA.XI.A.K8 – Visual illusions at night.
+- [x] Night Operations – Night Operations – PA.XI.A.R1 – Collision hazards.
+- [x] Night Operations – Night Operations – PA.XI.A.R2 – Distractions, task prioritization, loss of situational awareness, or disorientation.
+- [x] Night Operations – Night Operations – PA.XI.A.R3 – Effect of visual illusions and night adaptation during all phases of night flying.
+- [x] Night Operations – Night Operations – PA.XI.A.R4 – Runway incursion.
+- [x] Night Operations – Night Operations – PA.XI.A.R5 – Night currency versus proficiency.
+- [x] Night Operations – Night Operations – PA.XI.A.R6 – Weather considerations specific to night operations.
+- [x] Night Operations – Night Operations – PA.XI.A.R7 – Inoperative equipment.
+
+## Newly Identified Missing Elements (From Full Template Check)
+
+- [x] Preflight Preparation – Pilot Qualifications – PA.I.A.K5 – Part 68 BasicMed privileges and limitations.
+- [x] Preflight Preparation – Pilot Qualifications – PA.I.A.R2 – Flying unfamiliar aircraft or operating with unfamiliar flight display systems and avionics.
+- [x] Preflight Preparation – Pilot Qualifications – PA.I.A.S1 – Apply requirements to act as pilot-in-command (PIC) under Visual Flight Rules (VFR) in a scenario given by the evaluator.
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K1a – Location and expiration dates of required aircraft certificates
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K1b – Required inspections and airplane logbook documentation
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K1c – Airworthiness Directives and Special Airworthiness Information Bulletins
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K1d – Purpose and procedure for obtaining a special flight permit
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K1e – Owner/Operator and pilot-in-command responsibilities
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K3a – Flying with inoperative equipment
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K3b – Using an approved Minimum Equipment List (MEL)
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K3c – Kinds of Operation Equipment List (KOEL)
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.K3d – Required discrepancy records or placards
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.S2 – Determine the airplane is airworthy in the scenario given by the evaluator.
+- [x] Preflight Preparation – Airworthiness Requirements – PA.I.B.S3 – Apply appropriate procedures for operating with inoperative equipment in the scenario given by the evaluator.
+- [x] Preflight Preparation – Weather Information – PA.I.C.K2a – Airport Observations (METAR and SPECI) and Pilot Observations (PIREP)
+- [x] Preflight Preparation – Weather Information – PA.I.C.K2b – Surface Analysis Chart, Ceiling and Visibility Chart (CVA)
+- [x] Preflight Preparation – Weather Information – PA.I.C.K2c – Terminal Aerodrome Forecasts (TAF)
+- [x] Preflight Preparation – Weather Information – PA.I.C.K2d – Graphical Forecasts for Aviation (GFA)
+- [x] Preflight Preparation – Weather Information – PA.I.C.K2e – Wind and Temperature Aloft Forecast (FB)
+- [x] Preflight Preparation – Weather Information – PA.I.C.K2f – Convective Outlook (AC)
+- [x] Preflight Preparation – Weather Information – PA.I.C.K2g – Inflight Aviation Weather Advisories including AIRMET and SIGMET
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3a – Atmospheric composition and stability
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3b – Wind (e.g., windshear, mountain wave, factors affecting wind, etc.)
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3c – Temperature and heat exchange
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3d – Moisture/precipitation
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3e – Weather system formation, including air masses and fronts
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3f – Clouds
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3g – Turbulence
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3h – Thunderstorms and microbursts
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3i – Icing and freezing level information
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3j – Fog/mist
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3k – Frost
+- [x] Preflight Preparation – Weather Information – PA.I.C.K3l – Obstructions to visibility (e.g., smoke, haze, volcanic ash, etc.)
+- [x] Preflight Preparation – Weather Information – PA.I.C.R1a – Circumstances that would make diversion prudent
+- [x] Preflight Preparation – Weather Information – PA.I.C.R1b – Personal weather minimums
+- [x] Preflight Preparation – Weather Information – PA.I.C.R1c – Hazardous weather conditions, including known or forecast icing or turbulence aloft
+- [x] Preflight Preparation – Weather Information – PA.I.C.R2 – Use and limitations of weather-related tools and resources
+- [x] Preflight Preparation – Weather Information – PA.I.C.R2a – Installed onboard weather equipment
+- [x] Preflight Preparation – Weather Information – PA.I.C.R2b – Aviation weather reports and forecasts
+- [x] Preflight Preparation – Weather Information – PA.I.C.R2c – Inflight weather resources
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.K1a – Use of an electronic flight bag (EFB), if used
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.K3a – Time, climb and descent rates, course, distance, heading, true airspeed, and groundspeed
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.K3b – Estimated time of arrival, including conversion to universal coordinated time (UTC)
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.K3c – Fuel requirements, including reserve
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.K5 – Procedures for filing, activating, and closing a VFR flight plan.
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.K6 – Inflight intercept procedures.
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.R2 – Aircraft.
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.R3 – Environment (e.g., weather, airports, airspace, terrain, obstacles).
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.R4 – External pressures.
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.R5 – Limitations of air traffic control (ATC) services.
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.R6 – Fuel planning.
+- [x] Preflight Preparation – Cross-Country Flight Planning – PA.I.D.R7 – Use of an electronic flight bag (EFB), if used.
+- [x] Preflight Preparation – National Airspace System – PA.I.E.K1 – Airspace classes and associated requirements and limitations.
+- [x] Preflight Preparation – National Airspace System – PA.I.E.K2 – Chart symbols.
+- [x] Preflight Preparation – National Airspace System – PA.I.E.K3 – Special use airspace (SUA), special flight rules areas (SFRA), temporary flight restrictions (TFR), and other airspace areas.
+- [x] Preflight Preparation – National Airspace System – PA.I.E.K4 – Special visual flight rules (VFR) requirements.
+- [x] Preflight Preparation – National Airspace System – PA.I.E.S1 – Identify and comply with the requirements for basic VFR weather minimums and flying in particular classes of airspace.
+- [x] Preflight Preparation – National Airspace System – PA.I.E.S2 – Correctly identify airspace and operate in accordance with associated communication and equipment requirements.
+- [x] Preflight Preparation – National Airspace System – PA.I.E.S3 – Identify the requirements for operating in SUA or within a TFR. Identify and comply with special air traffic rules (SATR) and SFRA operations, if applicable.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K1 – Elements related to performance and limitations by explaining the use of charts, tables, and data to determine performance.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K2 – Factors affecting performance.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K2a – Atmospheric conditions
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K2b – Pilot technique
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K2c – Airplane configuration
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K2d – Airport environment
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K2e – Loading (e.g., center of gravity [CG])
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K2f – Weight and balance
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.K3 – Aerodynamics.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.R1 – Use of performance charts, tables, and data.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.R2 – Airplane limitations.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.R3 – Possible differences between calculated performance and actual performance.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.S1 – Compute the weight and balance, correct out-of-CG loading errors and determine if the weight and balance remains within limits during all phases of flight.
+- [x] Preflight Preparation – Performance and Limitations – PA.I.F.S2 – Use the appropriate airplane performance charts, tables, and data.
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1a – Primary flight controls
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1b – Secondary flight controls
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1c – Powerplant and propeller
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1d – Landing gear
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1e – Fuel, oil, and hydraulic
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1f – Electrical
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1g – Avionics
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1h – Pitot-static, vacuum/pressure, and associated flight instruments
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1i – Environmental
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1j – Deicing and anti-icing
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1k – Water rudders (ASES, AMES)
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K1l – Oxygen system
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.K2 – Indications of and procedures for managing system abnormalities or failures.
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.R1 – Detection of system malfunctions or failures.
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.R2 – Management of a system failure.
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.R3 – Monitoring and management of automated systems.
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.S1 – Operate at least three of the systems listed in K1a through K1l appropriately.
+- [x] Preflight Preparation – Operation of Systems – PA.I.G.S2 – Complete the appropriate checklist(s).
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1 – Symptoms, recognition, causes, effects, and corrective actions associated with aeromedical and physiological issues.
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1a – Hypoxia
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1b – Hyperventilation
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1c – Middle ear and sinus problems
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1d – Spatial disorientation
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1e – Motion sickness
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1f – Carbon monoxide poisoning
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1g – Stress
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1h – Fatigue
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1i – Dehydration and nutrition
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1j – Hypothermia
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1k – Optical illusions
+- [x] Preflight Preparation – Human Factors – PA.I.H.K1l – Dissolved nitrogen in the bloodstream after scuba dives
+- [x] Preflight Preparation – Human Factors – PA.I.H.K2 – Regulations regarding use of alcohol and drugs.
+- [x] Preflight Preparation – Human Factors – PA.I.H.K3 – Effects of alcohol, drugs, and over-the-counter medications.
+- [x] Preflight Preparation – Human Factors – PA.I.H.K4 – Aeronautical Decision-Making (ADM) to include using Crew Resource Management (CRM) or Single-Pilot Resource Management (SRM), as appropriate.
+- [x] Preflight Preparation – Human Factors – PA.I.H.R1 – Aeromedical and physiological issues.
+- [x] Preflight Preparation – Human Factors – PA.I.H.R2 – Hazardous attitudes.
+- [x] Preflight Preparation – Human Factors – PA.I.H.R3 – Distractions, task prioritization, loss of situational awareness, or disorientation.
+- [x] Preflight Preparation – Human Factors – PA.I.H.R4 – Confirmation and expectation bias.
+- [x] Preflight Preparation – Human Factors – PA.I.H.S1 – Associate the symptoms and effects for at least three of the conditions listed in K1a through K1l with the cause(s) and corrective action(s).
+- [x] Preflight Preparation – Human Factors – PA.I.H.S2 – Perform self-assessment, including fitness for flight and personal minimums, for actual flight or a scenario given by the evaluator.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K1 – Pilot self-assessment.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K2 – Determining that the airplane to be used is appropriate and airworthy.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K3 – Airplane preflight inspection.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K3a – Which items should be inspected
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K3b – The reasons for checking each item
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K3c – How to detect possible defects
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K3d – The associated regulations
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.K4 – Environmental factors, including weather, terrain, route selection, and obstructions.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.R1 – Pilot
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.R2 – Aircraft
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.R3 – Environment (e.g., weather, airports, airspace, terrain, obstacles)
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.R4 – External pressures
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.R5 – Aviation security concerns
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.S1 – Inspect the airplane with reference to an appropriate checklist.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.S2 – Verify the airplane is in condition for safe flight and conforms to its type design.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.S3 – Perform self-assessment.
+- [x] Preflight Procedures – Preflight Assessment – PA.II.A.S4 – Continue to assess the environment for safe flight.
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K4 – Selection of appropriate:
+- [x] Navigation – Pilotage and Dead Reckoning – PA.VI.A.K5 – Plotting a course, including:

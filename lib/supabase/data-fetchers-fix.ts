@@ -1,4 +1,4 @@
-import { createClient } from "./client"
+import { createSupabaseBrowserClient } from "./client"
 
 // Add StudentData type definition (or use the existing one)
 export type StudentData = {
@@ -13,7 +13,7 @@ export type StudentData = {
 
 // Modified function to get students that works with the current database structure
 export const getStudentsByUserIdFallback = async (userId: string): Promise<StudentData[]> => {
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
   
   try {
     // First try with the expected user_id filter
@@ -57,7 +57,7 @@ export async function getScenariosForTemplate(templateId: string) {
   // Use the client component helper to create a Supabase client instance
   // IMPORTANT: This assumes data-fetchers are intended to be called from client components.
   // If they need to be called from server-side, you'd use createServerClient here.
-  const supabase = createClient(); 
+  const supabase = createSupabaseBrowserClient(); 
 
   const { data, error } = await supabase
     .from('scenarios')
@@ -78,7 +78,7 @@ export async function getScenariosForTemplate(templateId: string) {
 // Function to fetch all templates
 export async function getTemplates() {
   // Use client Supabase instance, assuming called from client component
-  const supabase = createClient(); 
+  const supabase = createSupabaseBrowserClient(); 
   const { data, error } = await supabase
     .from('templates')
     .select('id, name') // Select only needed fields
@@ -107,7 +107,7 @@ type SessionPayload = {
 // Function to create a new session
 export async function createNewSession(payload: SessionPayload) {
   // Use client Supabase instance, assuming called from client component
-  const supabase = createClient(); 
+  const supabase = createSupabaseBrowserClient(); 
 
   const { data, error } = await supabase
     .from('sessions')

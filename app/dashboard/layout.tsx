@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
 import { DashboardNav } from "@/components/dashboard-nav"
 import { AcsSidebar } from "@/components/acs-sidebar"
@@ -17,10 +17,10 @@ export default function DashboardLayout({
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const supabase = useRef(createSupabaseBrowserClient()).current
 
   useEffect(() => {
     const checkSession = async () => {
-      const supabase = createClient();
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
@@ -40,7 +40,7 @@ export default function DashboardLayout({
     };
 
     checkSession();
-  }, [router]);
+  }, [router, supabase]);
 
   if (loading) {
     return (

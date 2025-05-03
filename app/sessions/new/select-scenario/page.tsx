@@ -10,7 +10,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getScenariosForTemplate, createNewSession, prepopulateSessionElements } from '@/lib/supabase/data-fetchers';
+import { getScenariosForTemplate, createNewSession, prepopulateSessionElements, setA2DeficienciesForSession } from '@/lib/supabase/data-fetchers';
 import type { User } from "@supabase/supabase-js";
 
 type Scenario = {
@@ -40,6 +40,8 @@ function SelectScenarioContent() {
   const studentId = searchParams.get('studentId');
   const sessionName = searchParams.get('sessionName');
   const notes = searchParams.get('notes');
+  const deficienciesParam = searchParams.get('deficiencies');
+  const selectedDeficiencyIds = deficienciesParam ? deficienciesParam.split(',').filter(Boolean) : [];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -120,6 +122,11 @@ function SelectScenarioContent() {
       if (!prepResult.success) {
           console.error("Failed to prepopulate session elements:", prepResult.error);
           toast({ title: "Warning", description: "Could not initialize all evaluation elements. Please refresh or contact support.", variant: "destructive" });
+      }
+
+      // Step 2.5: Set a2_deficiency for selected elements
+      if (selectedDeficiencyIds.length > 0) {
+        await setA2DeficienciesForSession(newSession.id, selectedDeficiencyIds);
       }
 
       // Step 3: Show success and navigate

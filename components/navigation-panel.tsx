@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Search, Folder, Layers, CheckCircle2, Circle, AlertCircle, Filter } from "lucide-react"
+import { Loader2, Search, Folder, Layers, CheckCircle2, Circle, AlertCircle, Filter, AlertTriangle, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { AreaWithTasksAndElements, TaskWithElements, ElementBasic } from "@/lib/supabase/data-fetchers"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 /**
  * NavigationPanel - Provides structured access to all evaluation elements
@@ -178,14 +179,55 @@ export function NavigationPanel({
     })
   }, [hierarchy])
 
+  const getStatusOrDeficiencyIcon = (element: any) => {
+    if (element.a2_deficiency) {
+      if (element.performance_status === "satisfactory") {
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span><AlertTriangle className="h-4 w-4 text-green-600" /></span>
+              </TooltipTrigger>
+              <TooltipContent>Written Test Deficiency (Satisfactory)</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      } else if (element.performance_status === "unsatisfactory") {
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span><AlertTriangle className="h-4 w-4 text-red-600" /></span>
+              </TooltipTrigger>
+              <TooltipContent>Written Test Deficiency (Unsatisfactory)</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      } else {
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span><AlertTriangle className="h-4 w-4 text-yellow-500" /></span>
+              </TooltipTrigger>
+              <TooltipContent>Written Test Deficiency – Must Be Covered</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      }
+    }
+    return getStatusIcon(element.status);
+  }
+
   const getStatusIcon = (status: ElementBasic['status']) => {
     switch (status) {
       case "completed":
         return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-      case "in-progress":
-        return <Circle className="h-3.5 w-3.5 text-amber-500" />
       case "issue":
         return <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+      case "in-progress":
+      case "not-observed":
+        return <Circle className="h-3.5 w-3.5 text-amber-500" />
       default:
         return <Circle className="h-3.5 w-3.5 text-muted-foreground" />
     }
@@ -333,7 +375,7 @@ export function NavigationPanel({
                                           title={element.description}
                                         >
                                           <div className="flex items-center gap-1.5 w-full">
-                                            {getStatusIcon(element.status)}
+                                            {getStatusOrDeficiencyIcon(element)}
                                             <span className="flex-1 truncate">
                                               {element.code}: {element.description}
                                             </span>
@@ -405,7 +447,7 @@ export function NavigationPanel({
                                 onClick={() => handleElementClick(element.id)}
                               >
                                 <div className="flex items-center gap-1.5">
-                                  {getStatusIcon(element.status)}
+                                  {getStatusOrDeficiencyIcon(element)}
                                   <span className="truncate">{element.code}</span>
                                 </div>
                               </Button>

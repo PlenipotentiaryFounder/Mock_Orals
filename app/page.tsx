@@ -1,16 +1,16 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 
 export default function RootPage() {
   const router = useRouter()
+  const supabase = useRef(createSupabaseBrowserClient()).current
 
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
-      const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session) {
@@ -23,7 +23,7 @@ export default function RootPage() {
     }
 
     checkAuthAndRedirect()
-  }, [router])
+  }, [router, supabase])
 
   // Display a loading indicator while checking auth
   return (

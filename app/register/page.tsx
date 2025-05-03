@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createClient } from "@/lib/supabase/client"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { ArrowLeft, Loader2, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -113,6 +113,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [devMode, setDevMode] = useState(false)
+  const supabase = useRef(createSupabaseBrowserClient()).current
 
   // Initialize student form
   const studentForm = useForm<z.infer<typeof studentSchema>>({
@@ -148,7 +149,6 @@ export default function RegisterPage() {
 
   const fetchCertifications = async () => {
     try {
-      const supabase = createClient();
       const { data, error } = await supabase
         .from("pilot_certifications")
         .select("*")
@@ -240,7 +240,6 @@ export default function RegisterPage() {
       }
       
       // Regular auth flow (non-dev mode)
-      const supabase = createClient();
       
       // 1. Create user in auth.users
       const {
