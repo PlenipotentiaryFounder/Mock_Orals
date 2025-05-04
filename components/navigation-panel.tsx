@@ -219,7 +219,7 @@ export function NavigationPanel({
     return getStatusIcon(element.status);
   }
 
-  const getStatusIcon = (status: ElementBasic['status']) => {
+  const getStatusIcon = (status: ElementBasic['status'] | 'not-observed') => {
     switch (status) {
       case "completed":
         return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />

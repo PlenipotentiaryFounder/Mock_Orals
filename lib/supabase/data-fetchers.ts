@@ -50,9 +50,10 @@ export type SampleQuestionData = {
 
 export type SessionData = {
   id: string
-  user_id: string
+  user_id: string // This is likely the instructor ID
   template_id: string
   scenario_id: string | null
+  student_id: string // Add the student ID field
   session_name: string
   notes: string | null
   date_started: string
@@ -316,34 +317,59 @@ export const getSessionWithDetails = async (
   session: SessionData; 
   template: TemplateData | null; 
   scenario: ScenarioData | null; 
+  student: StudentData | null; // Add student to return type
 } | null> => {
-  const session = await getSession(sessionId);
-  if (!session) return null;
+  const supabase = createSupabaseBrowserClient()
+  try {
+    // Fetch session details including student_id
+    const { data: sessionData, error: sessionError } = await supabase
+      .from("sessions")
+      .select("*, student_id") // Ensure student_id is selected
+      .eq("id", sessionId)
+      .single()
 
-  // Fetch template
-  const template = session.template_id 
-    ? await getTemplate(session.template_id) 
-    : null;
-
-  // Fetch scenario if scenario_id exists
-  let scenario: ScenarioData | null = null;
-  if (session.scenario_id) {
-    const supabase = createSupabaseBrowserClient();
-    const { data: scenarioData, error: scenarioError } = await supabase
-      .from('scenarios')
-      .select('*')
-      .eq('id', session.scenario_id)
-      .single();
-      
-    if (scenarioError) {
-      console.error("Error fetching scenario for session:", scenarioError);
-      // Don't fail the whole fetch if scenario lookup fails, just return null scenario
-    } else {
-      scenario = scenarioData;
+    if (sessionError || !sessionData) {
+      console.error("Error fetching session:", sessionError)
+      return null
     }
-  }
 
-  return { session, template, scenario };
+    // Fetch template details
+    const template = sessionData.template_id ? await getTemplate(sessionData.template_id) : null
+
+    // Fetch scenario details (if exists)
+    const scenario = sessionData.scenario_id ? await getScenario(sessionData.scenario_id) : null // Assuming getScenario exists or needs creation
+
+    // Fetch student details using the student_id from the session
+    let student: StudentData | null = null;
+    if (sessionData.student_id) {
+        console.log(`[getSessionWithDetails] Attempting to fetch student using user_id: ${sessionData.student_id}`); // Log the ID being used
+        const { data: studentData, error: studentError } = await supabase
+            .from("students") // Assuming the table is named 'students'
+            .select("*")
+            // Use user_id instead of id for the lookup
+            .eq("user_id", sessionData.student_id) 
+            .single();
+        
+        if (studentError) {
+            // Enhanced error logging
+            console.error("Error fetching student. Raw error:", studentError);
+            if (studentError.message) console.error("Supabase Error Message:", studentError.message);
+            if (studentError.details) console.error("Supabase Error Details:", studentError.details);
+            if (studentError.hint) console.error("Supabase Error Hint:", studentError.hint);
+            if (studentError.code) console.error("Supabase Error Code:", studentError.code);
+            // Decide if you want to return null session or just null student
+            // For now, we'll proceed but log the error
+        } else {
+            student = studentData;
+            console.log(`[getSessionWithDetails] Successfully fetched student: ${studentData?.full_name}`);
+        }
+    }
+
+    return { session: sessionData, template, scenario, student } // Include student in the returned object
+  } catch (error) {
+    console.error("Unexpected error in getSessionWithDetails:", error)
+    return null
+  }
 }
 
 // Get completed tasks for a session
@@ -1247,3 +1273,16 @@ export const fetchSessionDeficiencies = async (sessionId: string) => {
     description: ev.elements?.description,
   }));
 };
+
+// Function to get a single scenario (if not already existing)
+// Add this if it doesn't exist
+export const getScenario = async (scenarioId: string): Promise<ScenarioData | null> => {
+  const supabase = createSupabaseBrowserClient()
+  const { data, error } = await supabase.from("scenarios").select("*").eq("id", scenarioId).single()
+
+  if (error || !data) {
+    console.error("Error fetching scenario:", error)
+    return null
+  }
+  return data;
+}

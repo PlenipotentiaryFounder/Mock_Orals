@@ -11,9 +11,14 @@ import {
   SessionData, // Import types
   TemplateData, 
   ScenarioData, 
-  AreaWithTasksAndElements 
+  AreaWithTasksAndElements,
+  StudentData // Import StudentData type
 } from "@/lib/supabase/data-fetchers"
 import { Loader2 } from "lucide-react"
+import { Menu, X, PanelLeft, PanelRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription, SheetHeader } from "@/components/ui/sheet"
+import { useMediaQuery } from "@/hooks/use-media-query" // Import the hook
 
 // Import the new layout and panel components
 import { CommandCenterLayout } from "@/components/command-center/layout";
@@ -42,6 +47,7 @@ function SessionPageContent() {
     const [session, setSession] = useState<SessionData | null>(null);
     const [template, setTemplate] = useState<TemplateData | null>(null);
     const [scenario, setScenario] = useState<ScenarioData | null>(null);
+    const [student, setStudent] = useState<StudentData | null>(null); // Add student state
     const [hierarchy, setHierarchy] = useState<AreaWithTasksAndElements[]>([]);
     const [sessionNotes, setSessionNotes] = useState<string>("");
     const [loadingNotes, setLoadingNotes] = useState(true);
@@ -55,6 +61,11 @@ function SessionPageContent() {
     const [progressValue, setProgressValue] = useState(0); // Keep placeholder progress state
     const [error, setError] = useState<string | null>(null); // State for error messages
     const [view, setView] = useState<"standard" | "focus" | "timeline">("standard");
+    const [isNavOpen, setIsNavOpen] = useState(false); // Closed by default on mobile
+    const [isContextOpen, setIsContextOpen] = useState(false); // Closed by default on mobile
+
+    // Add media query hook for responsive logic
+    const isDesktop = useMediaQuery("(min-width: 1024px)");
 
     // Progress calculation from hierarchy
     const progressMetrics = useMemo(() => {
@@ -101,7 +112,7 @@ function SessionPageContent() {
         setSelectedElementId(elementOrder[newIndex].id);
     };
 
-    // Fetch Session, Template, Scenario details
+    // Fetch Session, Template, Scenario, Student details
     useEffect(() => {
         if (!sessionId) return;
         setLoadingInitialData(true);
@@ -112,6 +123,7 @@ function SessionPageContent() {
                     setSession(data.session);
                     setTemplate(data.template);
                     setScenario(data.scenario);
+                    setStudent(data.student); // Set student state
                      // TODO: Fetch initial progress data if needed
                      // const progress = await calculateSessionProgress(sessionId);
                      // setProgressValue(progress);
@@ -121,6 +133,7 @@ function SessionPageContent() {
                     setSession(null);
                     setTemplate(null);
                     setScenario(null);
+                    setStudent(null); // Reset student state on error
                 }
             })
             .catch(err => {
@@ -129,6 +142,7 @@ function SessionPageContent() {
                 setSession(null);
                 setTemplate(null);
                 setScenario(null);
+                setStudent(null); // Reset student state on error
             })
             .finally(() => {
                 setLoadingInitialData(false);
@@ -194,145 +208,190 @@ function SessionPageContent() {
             const newHierarchy = JSON.parse(JSON.stringify(currentHierarchy));
             
             // Find and update the element status
-            let found = false;
             for (const area of newHierarchy) {
                 for (const task of area.tasks) {
-                    const elementIndex = task.elements.findIndex((el: any) => el.id === elementId);
+                    // Explicitly type 'el' here based on the structure in hierarchy
+                    const elementIndex = task.elements.findIndex((el: { id: string; status: string }) => el.id === elementId);
                     if (elementIndex !== -1) {
                         task.elements[elementIndex].status = newStatus;
-                        found = true;
-                        break; // Exit inner loop once found
+                        // No need to break here if element IDs are unique across tasks, 
+                        // but assuming they are, we can optimize by returning early.
+                        // However, the deep copy approach requires returning the whole new hierarchy.
                     }
                 }
-                if (found) break; // Exit outer loop once found
             }
-
-            if (!found) {
-                console.warn("Saved element not found in hierarchy state:", elementId);
-                return currentHierarchy; // Return original state if not found
-            }
-
-            return newHierarchy;
+            return newHierarchy; // Return the updated hierarchy
         });
-        // Re-fetch hierarchy and deficiencies to ensure real-time updates
-        if (template?.id && sessionId) {
-            getFullHierarchy(template.id, sessionId).then(setHierarchy);
-        }
-        if (sessionId) {
-            fetchSessionDeficiencies(sessionId).then(setDeficiencyElements);
-        }
     };
 
-    // Combined loading state
-    const isLoading = loadingInitialData; // Keep initial load blocking, hierarchy can load after
-
-    if (isLoading) {
+    // Find the selected element's data (needs full hierarchy and selected ID)
+    const selectedElementData = useMemo(() => {
+        if (!selectedElementId || !hierarchy) return null;
+        for (const area of hierarchy) {
+            for (const task of area.tasks) {
+                const foundElement = task.elements.find(el => el.id === selectedElementId);
+                if (foundElement) {
+                    // Find the parent task and area for context if needed
+                    const parentTask = task;
+                    const parentArea = area;
+                    // You might need to fetch more details here if ElementBasic isn't enough
+                    // For now, return the basic data found + potentially parent info
+                    return { ...foundElement, parentTask, parentArea }; 
+                }
+            }
+        }
+        return null;
+    }, [selectedElementId, hierarchy]);
+    
+    if (loadingInitialData) {
         return (
             <div className="flex items-center justify-center h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2">Loading Session...</p>
             </div>
         );
     }
 
     if (error) {
-         return (
-            <div className="flex flex-col items-center justify-center h-screen">
-                <div className="max-w-md text-center p-6 bg-card rounded-lg shadow-md">
-                    <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Session</h2>
-                    <p className="text-muted-foreground mb-4">{error}</p>
-                    <a href="/sessions" className="text-primary hover:underline">
-                        Return to Sessions List
-                    </a>
-                </div>
-            </div>
-        );
-    }
-    
-    // Need session and template to proceed
-    if (!session || !template) {
-        // This case should ideally be covered by the error state now
-        // but kept as a fallback safeguard
         return (
-            <div className="flex items-center justify-center h-screen">
-                <p className="text-muted-foreground">Session or template data is missing.</p>
+            <div className="flex items-center justify-center h-screen text-red-600">
+                <p>{error}</p>
+                {/* Optionally add a retry button */}
             </div>
         );
     }
 
-    // Render the new Command Center Layout
+    if (!session) {
+         return (
+            <div className="flex items-center justify-center h-screen">
+                <p>Session not found or failed to load.</p>
+            </div>
+        );
+    }
+    
     return (
-        <CommandCenterLayout 
-            title={session.session_name || "Session"}
-            progress={progressMetrics.percentage}
-            navigationPanel={
-                view !== "focus" && (
-                  <NavigationPanel 
-                    hierarchy={hierarchy}
-                    isLoading={loadingHierarchy}
-                    onElementSelect={handleElementSelect}
-                    initialSelectedElementId={selectedElementId}
-                  />
+        <CommandCenterLayout
+            commandBar={(
+                <CommandBar
+                    session={session}
+                    template={template}
+                    currentView={view}
+                    onViewChange={setView}
+                />
+            )}
+            leftPanel={(
+                <>
+                    {/* Mobile Nav Trigger & Sheet */}
+                    <Sheet open={isNavOpen} onOpenChange={setIsNavOpen}>
+                        <SheetTrigger asChild className="lg:hidden fixed top-4 left-4 z-[60]">
+                           <Button variant="outline" size="icon">
+                                <PanelLeft className="h-4 w-4" />
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="left" className="p-0 w-72 sm:w-80">
+                            <SheetHeader className="p-4 border-b">
+                                <SheetTitle>Navigation</SheetTitle>
+                                <SheetDescription className="sr-only">Navigate session elements</SheetDescription>
+                            </SheetHeader>
+                            <NavigationPanel
+                                hierarchy={hierarchy}
+                                onElementSelect={(id) => {
+                                    handleElementSelect(id);
+                                    setIsNavOpen(false);
+                                }}
+                                initialSelectedElementId={selectedElementId}
+                                isLoading={loadingHierarchy}
+                            />
+                        </SheetContent>
+                    </Sheet>
+
+                    {/* Desktop Nav (always visible) - Add fixed width */}
+                    <div className="hidden lg:block h-full w-80 flex-shrink-0 border-r bg-background">
+                         <NavigationPanel
+                            hierarchy={hierarchy}
+                            onElementSelect={handleElementSelect}
+                            initialSelectedElementId={selectedElementId}
+                            isLoading={loadingHierarchy}
+                        />
+                    </div>
+                </>
+            )}
+            mainPanel={(
+                selectedElementId ? (
+                    <ElementDetailView
+                        key={selectedElementId}
+                        elementId={selectedElementId}
+                        sessionId={sessionId}
+                        elementOrder={elementOrder}
+                        currentElementIndex={currentElementIndex}
+                        onNavigateElement={onNavigateElement}
+                        onSaveSuccess={handleElementSaveSuccess}
+                    />
+                ) : (
+                    <SelectElementPlaceholder />
                 )
-            }
-            contextPanel={
-                scenario && view !== "focus" ? (
-                  <ContextPanel 
-                    scenario={scenario} 
-                    sessionNotes={sessionNotes}
-                    onSaveSessionNotes={handleSaveSessionNotes}
-                    deficiencyElements={deficiencyElements}
-                    loadingDeficiencies={loadingDeficiencies}
-                    defaultTab={view === "timeline" ? "history" : undefined}
-                    onDeficiencyElementSelect={setSelectedElementId}
-                  />
-                ) : undefined
-            }
-            statusPanel={
-                <StatusPanel 
-                    session={session} 
-                    template={template} 
+            )}
+            rightPanel={(
+                 <>
+                    {/* Mobile Context Trigger & Sheet */}
+                    <Sheet open={isContextOpen} onOpenChange={setIsContextOpen}>
+                         <SheetTrigger asChild className="lg:hidden fixed top-4 right-4 z-[60]">
+                            <Button variant="outline" size="icon">
+                                <PanelRight className="h-4 w-4" />
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="right" className="p-0 w-72 sm:w-80">
+                            <SheetHeader className="p-4 border-b">
+                                <SheetTitle>Context</SheetTitle>
+                                <SheetDescription className="sr-only">View session context and status</SheetDescription>
+                            </SheetHeader>
+                           <ContextPanel 
+                                scenario={scenario}
+                                session={session}
+                                sessionNotes={sessionNotes}
+                                onSaveSessionNotes={handleSaveSessionNotes}
+                                deficiencyElements={deficiencyElements}
+                                loadingDeficiencies={loadingDeficiencies}
+                                showGenerateReportButton={!isDesktop}
+                           />
+                        </SheetContent>
+                    </Sheet>
+
+                    {/* Desktop Context (always visible) - Add fixed width */}
+                    <div className="hidden lg:block h-full w-80 flex-shrink-0 border-l bg-background">
+                         <ContextPanel 
+                            scenario={scenario}
+                            session={session}
+                            sessionNotes={sessionNotes}
+                            onSaveSessionNotes={handleSaveSessionNotes}
+                            deficiencyElements={deficiencyElements}
+                            loadingDeficiencies={loadingDeficiencies}
+                            showGenerateReportButton={false}
+                         />
+                    </div>
+                </>
+            )}
+            statusBar={(
+                 <StatusPanel 
+                    session={session}
+                    template={template}
                     completed={progressMetrics.completed}
                     total={progressMetrics.total}
                     issues={progressMetrics.issues}
                     percentage={progressMetrics.percentage}
                 />
-            }
-            commandBar={
-                <CommandBar 
-                    session={session} 
-                    template={template} 
-                    currentView={view}
-                    onViewChange={(v) => setView(v as "standard" | "focus" | "timeline")}
-                />
-            }
-        >
-            {/* Main content area (WorkspacePanel is inside CommandCenterLayout) */}
-            <div className="h-full min-h-0 flex-1 flex flex-col overflow-hidden">
-            {selectedElementId ? (
-                <ElementDetailView 
-                    key={selectedElementId} // Re-render when element changes
-                    elementId={selectedElementId} 
-                    sessionId={sessionId} 
-                    onSaveSuccess={handleElementSaveSuccess}
-                    // Navigation props
-                    elementOrder={elementOrder}
-                    currentElementIndex={currentElementIndex}
-                    onNavigateElement={onNavigateElement}
-                />
-            ) : (
-                <SelectElementPlaceholder />
             )}
-            </div>
-        </CommandCenterLayout>
+        />
     );
 }
 
-// Wrap with Suspense for useSearchParams/useParams
+// Wrap the main content in Suspense for useSearchParams/useParams
 export default function SessionPage() {
     return (
         <Suspense fallback={
             <div className="flex items-center justify-center h-screen">
-                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2">Loading Session...</p>
             </div>
         }>
             <SessionPageContent />

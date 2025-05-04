@@ -27,24 +27,35 @@ interface StatusPanelProps {
 
 export function StatusPanel({ session, template, completed, total, issues, percentage }: StatusPanelProps) {
   // Format date for display
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | undefined | null) => {
     if (!dateString) return "N/A"
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return "Invalid Date"; // Check if date is valid
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    } catch (e) {
+        console.error("Error formatting date:", dateString, e);
+        return "Invalid Date";
+    }
   }
 
   // Calculate session duration
   const calculateDuration = () => {
-    if (!session.start_time) return "Not started"
+    // Add checks for session and start_time
+    if (!session?.start_time) return "Not started"
 
     const start = new Date(session.start_time)
     const end = session.end_time ? new Date(session.end_time) : new Date()
 
+    if (isNaN(start.getTime())) return "Invalid Start";
+
     const durationMs = end.getTime() - start.getTime()
+    if (durationMs < 0) return "Calculating..."; // Handle potential race condition
+
     const minutes = Math.floor(durationMs / 60000)
     const hours = Math.floor(minutes / 60)
 
@@ -59,7 +70,7 @@ export function StatusPanel({ session, template, completed, total, issues, perce
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-1.5">
           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-          <span>{formatDate(session.created_at)}</span>
+          <span>{formatDate(session?.created_at)}</span>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -70,11 +81,11 @@ export function StatusPanel({ session, template, completed, total, issues, perce
         {/* Add Student information */}
         <div className="flex items-center gap-1.5">
           <User className="h-3.5 w-3.5 text-muted-foreground" />
-          <span>Student: {session.student || "John Student"}</span>
+          <span>Student: {session?.student || "John Student"}</span>
           {/* TODO: Replace with dynamic student data from the session object */}
         </div>
 
-        {session.evaluator && (
+        {session?.evaluator && (
           <div className="flex items-center gap-1.5">
             <User className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Evaluator: {session.evaluator}</span>

@@ -56,7 +56,7 @@ import { useRouter } from "next/navigation"
 interface CommandBarProps {
   session: any
   template: any
-  onViewChange?: (view: string) => void
+  onViewChange?: (view: "standard" | "focus" | "timeline") => void
   currentView?: string
 }
 
@@ -105,8 +105,8 @@ export function CommandBar({ session, template, onViewChange, currentView = "sta
       <div className="flex items-center gap-4">
         {/* Session Title and Status */}
         <div className="flex items-center gap-2">
-          <h1 className="text-base font-semibold text-primary truncate max-w-[240px]">{session.session_name}</h1>
-          {session.status && (
+          <h1 className="text-base font-semibold text-primary truncate max-w-[240px]">{session?.session_name || 'Loading Session...'}</h1>
+          {session?.status && (
             <Badge variant={session.status === "Completed" ? "default" : "secondary"} className="flex-shrink-0">
               {session.status}
             </Badge>
@@ -119,7 +119,7 @@ export function CommandBar({ session, template, onViewChange, currentView = "sta
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="text-muted-foreground">
-              {template?.name}
+              {template?.name || 'Loading Template...'}
               <ChevronDown className="ml-1 h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
@@ -127,7 +127,7 @@ export function CommandBar({ session, template, onViewChange, currentView = "sta
             <div className="px-2 py-1.5 text-xs text-muted-foreground">Template Details</div>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-xs">
-              Created: {new Date(template?.created_at).toLocaleDateString()}
+              Created: {template ? new Date(template.created_at).toLocaleDateString() : 'N/A'}
             </DropdownMenuItem>
             <DropdownMenuItem className="text-xs">Version: {template?.version || "1.0"}</DropdownMenuItem>
             <DropdownMenuItem className="text-xs">Category: {template?.category || "Standard"}</DropdownMenuItem>
@@ -158,7 +158,7 @@ export function CommandBar({ session, template, onViewChange, currentView = "sta
          * These views allow instructors to switch between different perspectives
          * of the same session data based on their current task and needs.
          */}
-        <Tabs value={currentView} onValueChange={onViewChange} className="mr-4">
+        <Tabs value={currentView} onValueChange={onViewChange as (value: string) => void} className="mr-4">
           <TabsList className="h-8">
             <TabsTrigger value="standard" className="text-xs h-7 px-2">
               <LayoutGrid className="h-3.5 w-3.5 mr-1" />
@@ -276,16 +276,21 @@ export function CommandBar({ session, template, onViewChange, currentView = "sta
         </Button>
 
         {/* Generate Report Button */}
-        <Button size="sm" onClick={handleGenerateReport} disabled={isGeneratingReport} className="h-8 gap-1 text-xs">
+        <Button 
+            size="sm" 
+            onClick={handleGenerateReport} 
+            disabled={isGeneratingReport} 
+            className="h-8 gap-1 text-xs hidden lg:inline-flex"
+        >
           {isGeneratingReport ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span className="hidden sm:inline">Generating...</span>
+              <span className="sm:inline">Generating...</span>
             </>
           ) : (
             <>
               <FileText className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Generate Report</span>
+              <span className="sm:inline">Generate Report</span>
             </>
           )}
         </Button>
